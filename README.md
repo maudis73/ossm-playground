@@ -92,12 +92,13 @@ oc get pods -n ossm-playground-apps
 
 ## Phase 5 — Monitoring (Kiali graph, no tracing)
 
-Kiali’s **Graph** uses **Prometheus metrics** from `istio-proxy`. On OpenShift, each meshed app namespace needs a **PodMonitor** so user workload monitoring scrapes sidecar stats.
+Kiali’s **Graph** uses **Prometheus metrics** from `istio-proxy`. On OpenShift, user workload monitoring needs a **ServiceMonitor** for `istiod` and a **PodMonitor** per meshed app namespace.
 
 ```bash
-oc apply -f manifests/09-podmonitor.yaml
-oc apply -f manifests/10-telemetry-metrics.yaml
-oc apply -f manifests/11-kiali.yaml
+oc apply -f manifests/09-istiod-servicemonitor.yaml
+oc apply -f manifests/10-podmonitor.yaml
+oc apply -f manifests/11-telemetry-metrics.yaml
+oc apply -f manifests/12-kiali.yaml
 ```
 
 Refresh productpage several times, wait ~1 minute, then open Kiali → namespace **ossm-playground-apps** → **Graph**.
@@ -124,9 +125,10 @@ echo "https://$(oc get route kiali -n maurizio-istio-system -o jsonpath='{.spec.
 | `06-control-plane-namespace.yaml` | `maurizio-istio-system` namespace |
 | `07-istio-default.yaml` | `Istio/default` (minimal) |
 | `08-apps-mesh-enroll.yaml` | Mesh labels on app namespace |
-| `09-podmonitor.yaml` | Scrape `istio-proxy` metrics (OpenShift UWM) |
-| `10-telemetry-metrics.yaml` | `Telemetry/default` — Prometheus metrics only |
-| `11-kiali.yaml` | Minimal Kiali (Prometheus graph; tracing off) |
+| `09-istiod-servicemonitor.yaml` | Scrape `istiod` metrics (control plane) |
+| `10-podmonitor.yaml` | Scrape `istio-proxy` metrics (app workloads) |
+| `11-telemetry-metrics.yaml` | `Telemetry/default` — Prometheus metrics only |
+| `12-kiali.yaml` | Minimal Kiali (Prometheus graph; tracing off) |
 
 ---
 
