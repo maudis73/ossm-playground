@@ -14,7 +14,7 @@ spec:
             endpoint: 0.0.0.0:4317
     exporters:
       otlp:
-        endpoint: tempo-workshop-distributor.tempostack.svc.cluster.local:4317
+        endpoint: tempo-simplest-distributor.tempostack.svc.cluster.local:4317
         tls:
           insecure: true
     service:

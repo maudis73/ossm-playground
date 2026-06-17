@@ -125,14 +125,14 @@ Deploy the tracing pipeline. The mesh is **not** sending spans yet.
 
 ```bash
 oc delete opentelemetrycollector otel -n maurizio-istio-system --ignore-not-found
-oc delete tempostack simplest -n tempostack --ignore-not-found
+oc delete tempostack workshop -n tempostack --ignore-not-found
 oc apply -f manifests/13-tempostack-namespace.yaml
 oc apply -f manifests/14-minio-traces-secret.yaml
 oc apply -f manifests/15-tempostack.yaml
 oc apply -f manifests/16-otel-collector.yaml
 ```
 
-Wait until `TempoStack/workshop` is Ready and `OpenTelemetryCollector/otel` is `1/1`.
+Wait until `TempoStack/simplest` is Ready and `OpenTelemetryCollector/otel` is `1/1`.
 
 **Show:** Tempo and collector pods Running; Kiali **Traces** tab still empty.
 
@@ -184,7 +184,7 @@ echo "https://$(oc get route kiali -n maurizio-istio-system -o jsonpath='{.spec.
 | `12-kiali.yaml` | Kiali — graph (Thanos), tracing disabled |
 | `13-tempostack-namespace.yaml` | `tempostack` namespace |
 | `14-minio-traces-secret.yaml` | S3 secret for Tempo (MinIO backend) |
-| `15-tempostack.yaml` | `TempoStack/workshop` |
+| `15-tempostack.yaml` | `TempoStack/simplest` |
 | `16-otel-collector.yaml` | `OpenTelemetryCollector/otel` → Tempo |
 | `17-istio-tracing.yaml` | `Istio/default` — add OTLP extension provider |
 | `18-telemetry-tracing.yaml` | `Telemetry/default` — add OTLP tracing |

@@ -2,7 +2,7 @@
 apiVersion: tempo.grafana.com/v1alpha1
 kind: TempoStack
 metadata:
-  name: workshop
+  name: simplest
   namespace: tempostack
 spec:
   storage:
