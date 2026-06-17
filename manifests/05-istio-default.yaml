@@ -1,0 +1,14 @@
+# Istio/default — minimal sidecar control plane (no tracing/access-log providers).
+# discoverySelectors: only namespaces labeled istio-discovery=enabled are in mesh scope.
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: default
+spec:
+  namespace: maurizio-istio-system
+  version: v1.27-latest
+  values:
+    meshConfig:
+      discoverySelectors:
+        - matchLabels:
+            istio-discovery: enabled

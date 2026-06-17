@@ -1,0 +1,8 @@
+# Control plane namespace for Istio/default (shared cluster infra).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: maurizio-istio-system
+  labels:
+    istio-discovery: enabled
+    openshift.io/cluster-monitoring: "true"
