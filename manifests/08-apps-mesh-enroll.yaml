@@ -1,0 +1,10 @@
+# Enroll ossm-playground-apps in Istio/default (sidecar injection).
+# Apply after control plane (04–07), then rollout restart workloads.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ossm-playground-apps
+  labels:
+    openshift.io/cluster-monitoring: "true"
+    istio-discovery: enabled
+    istio.io/rev: default
