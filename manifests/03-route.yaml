@@ -1,0 +1,14 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: productpage
+  namespace: ossm-playground-apps
+spec:
+  to:
+    kind: Service
+    name: productpage
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

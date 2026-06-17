@@ -1,0 +1,168 @@
+# Bookinfo subset: productpage, details, reviews-v1
+# Upstream: https://github.com/istio/istio/tree/master/samples/bookinfo/platform/kube
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: details
+  namespace: ossm-playground-apps
+  labels:
+    app: details
+    service: details
+spec:
+  ports:
+    - port: 9080
+      name: http
+  selector:
+    app: details
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: bookinfo-details
+  namespace: ossm-playground-apps
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: details-v1
+  namespace: ossm-playground-apps
+  labels:
+    app: details
+    version: v1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: details
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: details
+        version: v1
+    spec:
+      serviceAccountName: bookinfo-details
+      containers:
+        - name: details
+          image: docker.io/istio/examples-bookinfo-details-v1:1.20.2
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: reviews
+  namespace: ossm-playground-apps
+  labels:
+    app: reviews
+    service: reviews
+spec:
+  ports:
+    - port: 9080
+      name: http
+  selector:
+    app: reviews
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: bookinfo-reviews
+  namespace: ossm-playground-apps
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reviews-v1
+  namespace: ossm-playground-apps
+  labels:
+    app: reviews
+    version: v1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: reviews
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: reviews
+        version: v1
+    spec:
+      serviceAccountName: bookinfo-reviews
+      containers:
+        - name: reviews
+          image: docker.io/istio/examples-bookinfo-reviews-v1:1.20.2
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: LOG_DIR
+              value: /tmp/logs
+          ports:
+            - containerPort: 9080
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: wlp-output
+              mountPath: /opt/ibm/wlp/output
+      volumes:
+        - name: wlp-output
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: productpage
+  namespace: ossm-playground-apps
+  labels:
+    app: productpage
+    service: productpage
+spec:
+  ports:
+    - port: 9080
+      name: http
+  selector:
+    app: productpage
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: bookinfo-productpage
+  namespace: ossm-playground-apps
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: productpage-v1
+  namespace: ossm-playground-apps
+  labels:
+    app: productpage
+    version: v1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: productpage
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: productpage
+        version: v1
+    spec:
+      serviceAccountName: bookinfo-productpage
+      containers:
+        - name: productpage
+          image: docker.io/istio/examples-bookinfo-productpage-v1:1.20.2
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9080
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
