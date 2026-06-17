@@ -1,0 +1,10 @@
+# Mesh-wide Prometheus metrics (no tracing yet).
+apiVersion: telemetry.istio.io/v1
+kind: Telemetry
+metadata:
+  name: default
+  namespace: maurizio-istio-system
+spec:
+  metrics:
+    - providers:
+        - name: prometheus

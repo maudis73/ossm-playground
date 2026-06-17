@@ -4,7 +4,7 @@ Hands-on workshop for OSSM 3 on OpenShift using **`Istio/default`** and the [Boo
 
 ## Prerequisites
 
-Cluster admin access, Sail / OSSM operator, and Istio CNI operator installed. Kiali, Tempo, and other observability tooling are out of scope for now (added in a later module).
+Cluster admin access, Sail / OSSM operator, Istio CNI operator, and **Kiali operator** installed. Tracing (Tempo) is a later module.
 
 ## The application
 
@@ -90,6 +90,28 @@ oc get pods -n ossm-playground-apps
 
 ---
 
+## Phase 5 — Monitoring (Kiali graph, no tracing)
+
+Kiali’s **Graph** uses **Prometheus metrics** from `istio-proxy`. On OpenShift, each meshed app namespace needs a **PodMonitor** so user workload monitoring scrapes sidecar stats.
+
+```bash
+oc apply -f manifests/09-podmonitor.yaml
+oc apply -f manifests/10-telemetry-metrics.yaml
+oc apply -f manifests/11-kiali.yaml
+```
+
+Refresh productpage several times, wait ~1 minute, then open Kiali → namespace **ossm-playground-apps** → **Graph**.
+
+```bash
+echo "https://$(oc get route kiali -n maurizio-istio-system -o jsonpath='{.spec.host}')"
+```
+
+**Show:** edges **productpage → details**, **productpage → reviews → ratings**, request rates on the graph.
+
+**Say:** the mesh works without PodMonitor, but Kiali has no traffic metrics to draw. Tracing is added in a later module.
+
+---
+
 ## Manifest index
 
 | File | Purpose |
@@ -102,6 +124,9 @@ oc get pods -n ossm-playground-apps
 | `06-control-plane-namespace.yaml` | `maurizio-istio-system` namespace |
 | `07-istio-default.yaml` | `Istio/default` (minimal) |
 | `08-apps-mesh-enroll.yaml` | Mesh labels on app namespace |
+| `09-podmonitor.yaml` | Scrape `istio-proxy` metrics (OpenShift UWM) |
+| `10-telemetry-metrics.yaml` | `Telemetry/default` — Prometheus metrics only |
+| `11-kiali.yaml` | Minimal Kiali (Prometheus graph; tracing off) |
 
 ---
 
