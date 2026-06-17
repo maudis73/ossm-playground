@@ -1,4 +1,4 @@
-# Mesh-wide Prometheus metrics (no tracing yet).
+# Mesh-wide metrics and tracing (OTLP via extension provider otel).
 apiVersion: telemetry.istio.io/v1
 kind: Telemetry
 metadata:
@@ -8,3 +8,7 @@ spec:
   metrics:
     - providers:
         - name: prometheus
+  tracing:
+    - providers:
+        - name: otel
+      randomSamplingPercentage: 100

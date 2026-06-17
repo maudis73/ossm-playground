@@ -1,5 +1,4 @@
-# Istio/default — minimal sidecar control plane (no tracing/access-log providers).
-# discoverySelectors: only namespaces labeled istio-discovery=enabled are in mesh scope.
+# Istio/default — discovery selectors + OTLP tracing to otel-collector.
 apiVersion: sailoperator.io/v1
 kind: Istio
 metadata:
@@ -12,3 +11,9 @@ spec:
       discoverySelectors:
         - matchLabels:
             istio-discovery: enabled
+      enableTracing: true
+      extensionProviders:
+        - name: otel
+          opentelemetry:
+            service: otel-collector.maurizio-istio-system.svc.cluster.local
+            port: 4317

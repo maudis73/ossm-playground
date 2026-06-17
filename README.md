@@ -4,7 +4,7 @@ Hands-on workshop for OSSM 3 on OpenShift using **`Istio/default`** and the [Boo
 
 ## Prerequisites
 
-Cluster admin access, Sail / OSSM operator, Istio CNI operator, and **Kiali operator** installed. Tracing (Tempo) is a later module.
+Cluster admin access, Sail / OSSM operator, Istio CNI operator, and **Kiali operator** installed. Shared **OpenTelemetry collector** (`maurizio-istio-system`) and **Tempo** (`tempostack`) for tracing.
 
 ## The application
 
@@ -90,7 +90,7 @@ oc get pods -n ossm-playground-apps
 
 ---
 
-## Phase 5 — Monitoring (Kiali graph, no tracing)
+## Phase 5 — Monitoring (metrics / Kiali graph)
 
 Kiali’s **Graph** uses **Prometheus metrics** from `istio-proxy`. On OpenShift, user workload monitoring needs a **ServiceMonitor** for `istiod` and a **PodMonitor** per meshed app namespace.
 
@@ -109,7 +109,31 @@ echo "https://$(oc get route kiali -n maurizio-istio-system -o jsonpath='{.spec.
 
 **Show:** edges **productpage → details**, **productpage → reviews → ratings**, request rates on the graph.
 
-**Say:** the mesh works without PodMonitor, but Kiali has no traffic metrics to draw. Tracing is added in a later module.
+**Say:** the mesh works without PodMonitor, but Kiali has no traffic metrics to draw.
+
+---
+
+## Phase 6 — Tracing
+
+Sidecars send spans **OTLP :4317** → `otel-collector` → Tempo. Kiali **Traces** queries Tempo on **:3200** (not the Jaeger UI port).
+
+Re-apply the updated control plane, telemetry, and Kiali manifests (if not already applied in Phase 5), then restart workloads so proxies pick up the OTLP exporter:
+
+```bash
+oc apply -f manifests/07-istio-default.yaml
+oc apply -f manifests/11-telemetry-metrics.yaml
+oc apply -f manifests/12-kiali.yaml
+oc wait istio/default --for=condition=Ready --timeout=300s
+oc rollout restart deployment -n ossm-playground-apps
+oc rollout status deployment/details-v1 deployment/reviews-v2 deployment/ratings-v1 deployment/productpage-v1 \
+  -n ossm-playground-apps --timeout=300s
+```
+
+Refresh productpage **10–15 times**, wait ~30s, then Kiali → **ossm-playground-apps** → **Traces** (range: **Last 1 hour**).
+
+**Show:** spans for `productpage` → `details`, `productpage` → `reviews` → `ratings`.
+
+**Say:** metrics (Phase 5) and traces use different backends — Prometheus/Thanos vs Tempo — but both appear in Kiali.
 
 ---
 
@@ -123,12 +147,12 @@ echo "https://$(oc get route kiali -n maurizio-istio-system -o jsonpath='{.spec.
 | `04-istio-cni-namespace.yaml` | CNI namespace |
 | `05-istio-cni-default.yaml` | `IstioCNI/default` |
 | `06-control-plane-namespace.yaml` | `maurizio-istio-system` namespace |
-| `07-istio-default.yaml` | `Istio/default` (minimal) |
+| `07-istio-default.yaml` | `Istio/default` — discovery selectors + OTLP tracing |
 | `08-apps-mesh-enroll.yaml` | Mesh labels on app namespace |
 | `09-istiod-servicemonitor.yaml` | Scrape `istiod` metrics (control plane) |
 | `10-podmonitor.yaml` | Scrape `istio-proxy` metrics (app workloads) |
-| `11-telemetry-metrics.yaml` | `Telemetry/default` — Prometheus metrics only |
-| `12-kiali.yaml` | Minimal Kiali (Prometheus graph; tracing off) |
+| `11-telemetry-metrics.yaml` | `Telemetry/default` — Prometheus + OTLP tracing |
+| `12-kiali.yaml` | Kiali — graph (Thanos) + traces (Tempo) |
 
 ---
 
