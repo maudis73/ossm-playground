@@ -1,0 +1,20 @@
+# Phase 7 — enable OTLP tracing on the mesh (apply after 16-otel-collector is Ready).
+# Full Istio CR: discovery selectors + extension provider otel → otel-collector :4317.
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: default
+spec:
+  namespace: maurizio-istio-system
+  version: v1.27-latest
+  values:
+    meshConfig:
+      discoverySelectors:
+        - matchLabels:
+            istio-discovery: enabled
+      enableTracing: true
+      extensionProviders:
+        - name: otel
+          opentelemetry:
+            service: otel-collector.maurizio-istio-system.svc.cluster.local
+            port: 4317

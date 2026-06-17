@@ -1,4 +1,4 @@
-# Minimal Kiali — Prometheus metrics / traffic graph only (no tracing).
+# Phase 7 — Kiali graph (Thanos) + traces (Tempo native API on :3200).
 apiVersion: kiali.io/v1alpha1
 kind: Kiali
 metadata:
@@ -25,4 +25,13 @@ spec:
     grafana:
       enabled: false
     tracing:
-      enabled: false
+      enabled: true
+      provider: tempo
+      use_grpc: false
+      internal_url: http://tempo-workshop-query-frontend.tempostack.svc.cluster.local:3200
+      health_check_url: http://tempo-workshop-query-frontend.tempostack.svc.cluster.local:3200/status/services
+      external_url: https://tempo-workshop-query-frontend-tempostack.apps.ocp4.masales.cloud
+      namespace_selector: true
+      query_timeout: 60
+      tempo_config:
+        url_format: jaeger

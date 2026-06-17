@@ -1,0 +1,26 @@
+# Minimal OTel collector — OTLP in, export to Tempo distributor (RH pattern).
+apiVersion: opentelemetry.io/v1beta1
+kind: OpenTelemetryCollector
+metadata:
+  name: otel
+  namespace: maurizio-istio-system
+spec:
+  mode: deployment
+  config:
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+    exporters:
+      otlp:
+        endpoint: tempo-workshop-distributor.tempostack.svc.cluster.local:4317
+        tls:
+          insecure: true
+    service:
+      pipelines:
+        traces:
+          receivers:
+            - otlp
+          exporters:
+            - otlp

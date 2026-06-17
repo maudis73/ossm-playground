@@ -1,0 +1,14 @@
+# Phase 7 — mesh-wide metrics + OTLP tracing (provider name must match extensionProviders in 17).
+apiVersion: telemetry.istio.io/v1
+kind: Telemetry
+metadata:
+  name: default
+  namespace: maurizio-istio-system
+spec:
+  metrics:
+    - providers:
+        - name: prometheus
+  tracing:
+    - providers:
+        - name: otel
+      randomSamplingPercentage: 100
