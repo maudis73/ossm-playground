@@ -1,0 +1,8 @@
+# Istio CNI plugin — minimal install for sidecar and ambient-capable clusters.
+apiVersion: sailoperator.io/v1
+kind: IstioCNI
+metadata:
+  name: default
+spec:
+  namespace: istio-cni
+  version: v1.28.5
