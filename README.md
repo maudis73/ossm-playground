@@ -124,8 +124,6 @@ echo "https://$(oc get route kiali -n maurizio-istio-system -o jsonpath='{.spec.
 Deploy the tracing pipeline. The mesh is **not** sending spans yet.
 
 ```bash
-oc delete opentelemetrycollector otel -n maurizio-istio-system --ignore-not-found
-oc delete tempostack workshop -n tempostack --ignore-not-found
 oc apply -f manifests/13-tempostack-namespace.yaml
 oc apply -f manifests/14-minio-traces-secret.yaml
 oc apply -f manifests/15-tempostack.yaml
