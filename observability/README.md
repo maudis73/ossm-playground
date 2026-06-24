@@ -6,8 +6,6 @@ You build mesh observability step by step: **metrics** (Kiali graph), **distribu
 
 Run `oc apply` commands from the **repository root** (paths below are repo-relative).
 
-Control plane namespace on this workshop: **`istio-system`**.
-
 In Phases 3 and 5–8, each step shows **what we configure** (the important YAML) **before** the `oc apply` commands, so you can relate the goal to the change.
 
 ## Phases at a glance
@@ -63,13 +61,33 @@ Install and ensure these Operators are **Available** (cluster admin task):
 
 All are in **OperatorHub** → **Operators** → **Install**.
 
-> **Note:** this is a **sidecar** workshop. You do **not** need the Kubernetes **Gateway API** CRDs or `istioctl` (those are for the separate [ambient workshop](../ambient/README.md)).
-
 ### Enable user workload monitoring
 
-OpenShift **user workload monitoring** is required for **`PodMonitor`** scraping. The cluster admin must set `enableUserWorkload: true` in the `cluster-monitoring-config` ConfigMap (`openshift-monitoring` namespace). See [Red Hat documentation](https://docs.redhat.com/en/documentation/openshift_container_platform/latest/html/monitoring/configuring-user-workload-monitoring).
+OpenShift **user workload monitoring** is required for **`PodMonitor`** scraping. If `cluster-monitoring-config` does not exist yet, create it:
 
-Verify it is running:
+```yaml
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: cluster-monitoring-config
+  namespace: openshift-monitoring
+data:
+  config.yaml: |
+    enableUserWorkload: true
+```
+
+```bash
+oc apply -f observability/manifests/00-user-workload-monitoring.yaml
+```
+
+If the ConfigMap already exists, ensure `enableUserWorkload` is `true`:
+
+```bash
+oc -n openshift-monitoring patch configmap cluster-monitoring-config \
+  -p '{"data":{"config.yaml":"enableUserWorkload: true"}}'
+```
+
+Verify user workload monitoring is running:
 
 ```bash
 oc get pods -n openshift-user-workload-monitoring
