@@ -6,7 +6,19 @@ You build mesh observability step by step: **metrics** (Kiali graph), **distribu
 
 Run `oc apply` commands from the **repository root** (paths below are repo-relative).
 
-In Phases 3 and 5–8, each step shows **what we configure** (the important YAML) **before** the `oc apply` commands, so you can relate the goal to the change.
+In Phases 3–8, each step shows **what you configure** before the `oc apply` commands:
+
+- **New resource** — excerpt of the manifest you apply (first time that object exists on the cluster).
+- **Update** — only the fields you **add or change**. `oc apply -f …` **merges** into the object already on the cluster (same `kind`, `name`, and namespace). Repo manifests are the full merged object; snippets show the delta.
+
+### Shared CRs (created once, updated later)
+
+| Resource | Created | Later updates |
+|----------|---------|---------------|
+| `Istio/default` | Phase 3 | Phase 7 — tracing |
+| `Telemetry/default` | Phase 5 — metrics | Phases 7–8 — tracing, access logs |
+| `Kiali/kiali-user-workload-monitoring` | Phase 5 | Phase 7 — tracing |
+| `Namespace/ossm-playground-apps` | Phase 1 | Phase 4 — mesh labels |
 
 ## Phases at a glance
 
@@ -173,7 +185,7 @@ oc wait istiocni/default --for=condition=Ready --timeout=300s
 
 **Goal:** create `Istio/default` with **discovery scope only** — no observability yet.
 
-We scope the control plane to namespaces labeled `istio-discovery=enabled`:
+Scope the control plane to namespaces labeled `istio-discovery=enabled`:
 
 ```yaml
 # observability/manifests/07-istio-default.yaml (excerpt)
@@ -209,14 +221,15 @@ oc get pods -n istio-system -l istio=pilot
 
 **Goal:** label the app namespace so **sidecars are injected** from `Istio/default`.
 
+Add mesh labels to `ossm-playground-apps`:
+
 ```yaml
-# observability/manifests/08-apps-mesh-enroll.yaml (labels)
 metadata:
   name: ossm-playground-apps
   labels:
-    openshift.io/cluster-monitoring: "true"   # allow PodMonitor (Phase 5)
-    istio-discovery: enabled                # in scope for istiod
-    istio.io/rev: default                    # sidecar injection
+    openshift.io/cluster-monitoring: "true"
+    istio-discovery: enabled
+    istio.io/rev: default
 ```
 
 ### Apply
@@ -239,9 +252,9 @@ oc get pods -n ossm-playground-apps
 
 **Goal:** enable **Prometheus metrics** on proxies, **scrape** them, and point **Kiali** at Thanos.
 
-Three changes work together:
+Three resources work together:
 
-**1. `Telemetry` — tell every sidecar to expose Prometheus stats** (`11`):
+**1. `Telemetry/default` — enable Prometheus metrics on proxies** (`11`):
 
 ```yaml
 apiVersion: telemetry.istio.io/v1
@@ -255,7 +268,7 @@ spec:
         - name: prometheus           # built-in Envoy stats provider
 ```
 
-**2. `PodMonitor` — tell OpenShift Prometheus to scrape `istio-proxy`** (`10`):
+**2. `PodMonitor` — scrape `istio-proxy` metrics** (`10`):
 
 ```yaml
 spec:
@@ -268,7 +281,7 @@ spec:
         operator: DoesNotExist
 ```
 
-**3. `Kiali` — graph from Thanos; tracing off for now** (`12`):
+**3. `Kiali` — traffic graph from Thanos** (`12`):
 
 ```yaml
 spec:
@@ -399,7 +412,7 @@ oc apply -f observability/manifests/21-tempostack-oauth-proxy-resources.yaml
 
 Three resources must agree on the provider name **`otel`**:
 
-**1. `Istio` — register the OTLP destination** (`17` adds to Phase 3):
+**1. `Istio/default` — register OTLP destination** (`17`):
 
 ```yaml
 spec:
@@ -413,20 +426,17 @@ spec:
             port: 4317
 ```
 
-**2. `Telemetry` — turn tracing on for all sidecars** (`18` extends Phase 5):
+**2. `Telemetry/default` — enable tracing** (`18`):
 
 ```yaml
 spec:
-  metrics:
-    - providers:
-        - name: prometheus
   tracing:
     - providers:
         - name: otel                    # must match extensionProviders name
       randomSamplingPercentage: 100
 ```
 
-**3. `Kiali` — query Tempo for the Traces tab** (`19`):
+**3. `Kiali` — enable Traces tab** (`19`):
 
 ```yaml
 spec:
@@ -463,19 +473,10 @@ echo "https://$(oc get route kiali -n istio-system -o jsonpath='{.spec.host}')"
 
 ## Phase 8 — Access logs
 
-**Goal:** add **Envoy access logs** to the existing `Telemetry` policy (metrics + tracing stay).
-
-`20` extends Phase 7 with the built-in **`envoy`** access-log provider:
+**Goal:** add **Envoy access logs** to `Telemetry/default`.
 
 ```yaml
 spec:
-  metrics:
-    - providers:
-        - name: prometheus
-  tracing:
-    - providers:
-        - name: otel
-      randomSamplingPercentage: 100
   accessLogging:
     - providers:
         - name: envoy                 # logs to istio-proxy stdout
