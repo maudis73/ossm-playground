@@ -1,7 +1,0 @@
-# Phase 9a — ztunnel namespace for ambient dataplane.
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: ztunnel
-  labels:
-    istio-discovery: enabled
