@@ -49,6 +49,10 @@ Phases 1–4 install the mesh incrementally so you can see **which control-plane
 
 ## The application
 
+![Bookinfo architecture (no Istio)](https://istio.io/latest/docs/examples/bookinfo/noistio.svg)
+
+*Source: [Istio Bookinfo](https://istio.io/latest/docs/examples/bookinfo/). This workshop deploys **reviews-v2** (black stars, calls **ratings**).*
+
 | Service | Role |
 |---------|------|
 | **productpage** | Web UI — open in the browser |
