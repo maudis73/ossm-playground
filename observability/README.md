@@ -42,10 +42,53 @@ Phases 1–4 install the mesh incrementally so you can see **which control-plane
 
 ## Prerequisites
 
-- Cluster admin access (some phases)
-- Sail / OSSM operator, Istio CNI operator, **Kiali operator**
-- OpenShift **user workload monitoring** enabled
-- **Phases 6–8:** Tempo operator, OpenTelemetry operator, and object storage for traces (this lab expects a shared S3-compatible store such as MinIO — deployment steps may be added later)
+Complete these before starting the workshop. The manifests in this repo do not install Operators for you.
+
+### Log in to OpenShift
+
+You need a user with **cluster-admin** (or equivalent) to install Operators and apply the workshop manifests.
+
+```bash
+oc login --token=<token> --server=<api-server>
+```
+
+### Install Operators from OperatorHub
+
+Install and ensure these Operators are **Available** (cluster admin task):
+
+- **Red Hat OpenShift Service Mesh 3**
+- **Kiali Operator** (provided by Red Hat)
+- **Tempo Operator** (provided by Red Hat)
+- **Red Hat build of OpenTelemetry**
+
+All are in **OperatorHub** → **Operators** → **Install**.
+
+> **Note:** this is a **sidecar** workshop. You do **not** need the Kubernetes **Gateway API** CRDs or `istioctl` (those are for the separate [ambient workshop](../ambient/README.md)).
+
+### Enable user workload monitoring
+
+OpenShift **user workload monitoring** is required for **`PodMonitor`** scraping. The cluster admin must set `enableUserWorkload: true` in the `cluster-monitoring-config` ConfigMap (`openshift-monitoring` namespace). See [Red Hat documentation](https://docs.redhat.com/en/documentation/openshift_container_platform/latest/html/monitoring/configuring-user-workload-monitoring).
+
+Verify it is running:
+
+```bash
+oc get pods -n openshift-user-workload-monitoring
+```
+
+You should see `prometheus-user-workload` (and related pods) **Running**.
+
+### Object storage for traces
+
+`TempoStack` needs S3-compatible storage. Manifest `14` references a shared **MinIO** service (`minio` namespace). Ensure object storage is available, or update `14-minio-traces-secret.yaml` for your environment. MinIO deployment steps may be added to this repo later.
+
+### Clone the workshop repository
+
+```bash
+git clone https://github.com/maudis73/ossm-playground.git
+cd ossm-playground
+```
+
+Run all `oc apply` commands from the **repository root**.
 
 ## The application
 

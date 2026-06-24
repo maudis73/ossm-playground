@@ -14,10 +14,7 @@ Repository: [github.com/maudis73/ossm-playground](https://github.com/maudis73/os
 
 ## Shared prerequisites
 
-- Cluster admin access (some phases)
-- Sail / OSSM operator, Istio CNI operator, **Kiali operator**
-- OpenShift **user workload monitoring** enabled
-- For observability Phases 6–8: **Tempo operator**, **OpenTelemetry operator**, shared **MinIO** in `minio` (trace storage)
+See **[observability/README.md](observability/README.md#prerequisites)** for the full list: Operators (OSSM 3, Kiali, Tempo, OpenTelemetry), user workload monitoring, object storage for traces, and cluster admin access.
 
 ## Getting started
 
