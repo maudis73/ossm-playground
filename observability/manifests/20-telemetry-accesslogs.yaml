@@ -1,0 +1,18 @@
+# Phase 8 — metrics + tracing + Envoy access logs (stdout on istio-proxy).
+# Apply after Phase 7. Provider "envoy" is built-in — logs appear in Kiali Proxy logs.
+apiVersion: telemetry.istio.io/v1
+kind: Telemetry
+metadata:
+  name: default
+  namespace: maurizio-istio-system
+spec:
+  metrics:
+    - providers:
+        - name: prometheus
+  tracing:
+    - providers:
+        - name: otel
+      randomSamplingPercentage: 100
+  accessLogging:
+    - providers:
+        - name: envoy

@@ -1,0 +1,10 @@
+# Phase 9a — enable ambient profile on Istio CNI (sidecar + ambient coexist).
+# Apply after Phase 2 CNI is Ready.
+apiVersion: sailoperator.io/v1
+kind: IstioCNI
+metadata:
+  name: default
+spec:
+  namespace: istio-cni
+  version: v1.27-latest
+  profile: ambient

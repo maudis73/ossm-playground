@@ -1,0 +1,10 @@
+# Phase 9b — ambient namespace for ratings (ztunnel + waypoint).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ossm-playground-ambient
+  labels:
+    openshift.io/cluster-monitoring: "true"
+    istio-discovery: enabled
+    istio.io/dataplane-mode: ambient
+    istio.io/use-waypoint: ratings-waypoint

@@ -1,0 +1,14 @@
+# Phase 9a — ztunnel DaemonSet (per-node ambient L4 dataplane).
+apiVersion: sailoperator.io/v1
+kind: ZTunnel
+metadata:
+  name: default
+spec:
+  namespace: ztunnel
+  version: v1.27-latest
+  profile: ambient
+  values:
+    ztunnel:
+      istioNamespace: maurizio-istio-system
+      logLevel: info
+      terminationGracePeriodSeconds: 30

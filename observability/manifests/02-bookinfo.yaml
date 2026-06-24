@@ -167,6 +167,7 @@ spec:
       volumes:
         - name: tmp
           emptyDir: {}
+---
 # Upstream: https://github.com/istio/istio/tree/master/samples/bookinfo/platform/kube
 apiVersion: v1
 kind: Service

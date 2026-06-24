@@ -1,0 +1,14 @@
+# Phase 9b — L7 waypoint for ratings service (HTTP metrics, tracing, access logs).
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: ratings-waypoint
+  namespace: ossm-playground-ambient
+  labels:
+    istio.io/waypoint-for: service
+spec:
+  gatewayClassName: istio-waypoint
+  listeners:
+    - name: mesh
+      port: 15008
+      protocol: HBONE
