@@ -17,7 +17,7 @@ In Phases 3 and 5–8, each step shows **what we configure** (the important YAML
 | 3 | `Istio/default` (discovery only) | — |
 | 4 | Mesh enrollment (sidecar injection) | — |
 | 5 | PodMonitor, `Telemetry` metrics, Kiali | **Metrics** → Kiali graph |
-| 6 | TempoStack, OTel collector | Tracing **backend** (no spans yet) |
+| 6 | MinIO, TempoStack, OTel collector | Tracing **backend** (no spans yet) |
 | 7 | Istio + `Telemetry` + Kiali tracing | **Traces** → Kiali |
 | 8 | `Telemetry` access logs | **Access logs** → Kiali proxy logs |
 
@@ -94,10 +94,6 @@ oc get pods -n openshift-user-workload-monitoring
 ```
 
 You should see `prometheus-user-workload` (and related pods) **Running**.
-
-### Object storage for traces
-
-`TempoStack` needs S3-compatible storage. Manifest `14` references a shared **MinIO** service (`minio` namespace). Ensure object storage is available, or update `14-minio-traces-secret.yaml` for your environment. MinIO deployment steps may be added to this repo later.
 
 ### Clone the workshop repository
 
@@ -308,11 +304,25 @@ Kiali → namespace **ossm-playground-apps** → **Graph**.
 
 ---
 
-## Phase 6 — Tracing backend (Tempo + OTel collector)
+## Phase 6 — Tracing backend (MinIO + Tempo + OTel collector)
 
-**Goal:** deploy trace **storage** and an **ingestion hop** — proxies still do not export spans until Phase 7.
+**Goal:** deploy S3-compatible **object storage**, trace **storage** (`TempoStack`), and an **ingestion hop** (`OpenTelemetryCollector`) — proxies still do not export spans until Phase 7.
 
-**1. `TempoStack` — trace backend using object storage** (`15`):
+**1. MinIO — S3-compatible object storage** (`observability/manifests/minio/`):
+
+Deploys MinIO in the `minio` namespace, exposes API and console Routes, and runs a Job that creates the `ossm-traces` bucket used by Tempo. Manifests match the [OSSM ambient lab MinIO install](https://github.com/ortwinschneider/ossm-playground/tree/main/ambient/030-tracing-install/00-minio).
+
+```bash
+oc apply -f observability/manifests/minio/
+```
+
+Wait until the MinIO pod is **Running** and `create-minio-buckets` has **Completed**:
+
+```bash
+oc get pods,job -n minio
+```
+
+**2. `TempoStack` — trace backend using MinIO** (`15`):
 
 ```yaml
 apiVersion: tempo.grafana.com/v1alpha1
@@ -327,7 +337,7 @@ spec:
       type: s3
 ```
 
-**2. `OpenTelemetryCollector` — receive OTLP from mesh, forward to Tempo** (`16`):
+**3. `OpenTelemetryCollector` — receive OTLP from mesh, forward to Tempo** (`16`):
 
 ```yaml
 spec:
@@ -350,15 +360,16 @@ spec:
 ### Apply
 
 ```bash
+oc apply -f observability/manifests/minio/
 oc apply -f observability/manifests/13-tempostack-namespace.yaml
 oc apply -f observability/manifests/14-minio-traces-secret.yaml
 oc apply -f observability/manifests/15-tempostack.yaml
 oc apply -f observability/manifests/16-otel-collector.yaml
 ```
 
-Wait until `TempoStack/simplest` is Ready and `OpenTelemetryCollector/otel` is `1/1`.
+Wait until MinIO and `create-minio-buckets` are ready, then until `TempoStack/simplest` is Ready and `OpenTelemetryCollector/otel` is `1/1`.
 
-> **Verify:** Tempo and collector pods Running. Kiali **Traces** tab still empty.
+> **Verify:** `minio` pod Running; bucket job **Completed**; Tempo and collector pods Running. Kiali **Traces** tab still empty.
 >
 > **Note:** this is the **backend pipeline** only. Nothing in the mesh points at the collector yet.
 
@@ -475,7 +486,7 @@ Refresh productpage several times, then Kiali → **Workloads** → **productpag
 ## Cleanup
 
 ```bash
-oc delete namespace ossm-playground-apps tempostack
+oc delete namespace ossm-playground-apps tempostack minio
 # Optional: leave Istio/default and CNI if shared cluster infrastructure
 ```
 

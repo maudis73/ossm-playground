@@ -14,7 +14,7 @@ Repository: [github.com/maudis73/ossm-playground](https://github.com/maudis73/os
 
 ## Shared prerequisites
 
-See **[observability/README.md](observability/README.md#prerequisites)** for the full list: Operators (OSSM 3, Kiali, Tempo, OpenTelemetry), user workload monitoring, object storage for traces, and cluster admin access.
+See **[observability/README.md](observability/README.md#prerequisites)** for the full list: Operators (OSSM 3, Kiali, Tempo, OpenTelemetry), user workload monitoring, and cluster admin access.
 
 ## Getting started
 
@@ -27,4 +27,4 @@ less observability/README.md
 
 ## Cleanup
 
-Each demo documents its own namespaces. Observability removes `ossm-playground-apps` and `tempostack`; shared control plane (`Istio/default`, CNI) can stay on lab clusters.
+Each demo documents its own namespaces. Observability removes `ossm-playground-apps`, `tempostack`, and `minio`; shared control plane (`Istio/default`, CNI) can stay on lab clusters.
