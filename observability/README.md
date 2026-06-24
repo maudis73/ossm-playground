@@ -308,18 +308,22 @@ Kiali → namespace **ossm-playground-apps** → **Graph**.
 
 **Goal:** deploy S3-compatible **object storage**, trace **storage** (`TempoStack`), and an **ingestion hop** (`OpenTelemetryCollector`) — proxies still do not export spans until Phase 7.
 
-**1. MinIO — S3-compatible object storage** (`observability/manifests/minio/`):
+**1. MinIO — S3 object storage for traces**
 
-Deploys MinIO in the `minio` namespace, exposes API and console Routes, and runs a Job that creates the `ossm-traces` bucket used by Tempo. Manifests match the [OSSM ambient lab MinIO install](https://github.com/ortwinschneider/ossm-playground/tree/main/ambient/030-tracing-install/00-minio).
+`TempoStack` stores trace data in an S3 bucket. Apply the manifests in `observability/manifests/minio/` to:
 
-```bash
-oc apply -f observability/manifests/minio/
-```
+- create the `minio` namespace and credentials
+- run a MinIO server backed by a PVC
+- expose the S3 API on `minio-service.minio.svc.cluster.local:9000`
+- run a Job that creates the `ossm-traces` bucket
 
-Wait until the MinIO pod is **Running** and `create-minio-buckets` has **Completed**:
+The bucket name must match manifest `14`:
 
-```bash
-oc get pods,job -n minio
+```yaml
+# observability/manifests/14-minio-traces-secret.yaml
+stringData:
+  endpoint: http://minio-service.minio.svc.cluster.local:9000
+  bucket: ossm-traces
 ```
 
 **2. `TempoStack` — trace backend using MinIO** (`15`):
@@ -359,15 +363,23 @@ spec:
 
 ### Apply
 
+Apply MinIO first, wait for the bucket Job, then deploy Tempo and the collector:
+
 ```bash
 oc apply -f observability/manifests/minio/
+oc get pods,job -n minio
+```
+
+Wait until the `minio` pod is **Running** and `create-minio-buckets` is **Completed**, then:
+
+```bash
 oc apply -f observability/manifests/13-tempostack-namespace.yaml
 oc apply -f observability/manifests/14-minio-traces-secret.yaml
 oc apply -f observability/manifests/15-tempostack.yaml
 oc apply -f observability/manifests/16-otel-collector.yaml
 ```
 
-Wait until MinIO and `create-minio-buckets` are ready, then until `TempoStack/simplest` is Ready and `OpenTelemetryCollector/otel` is `1/1`.
+Wait until `TempoStack/simplest` is Ready and `OpenTelemetryCollector/otel` is `1/1`.
 
 > **Verify:** `minio` pod Running; bucket job **Completed**; Tempo and collector pods Running. Kiali **Traces** tab still empty.
 >
