@@ -4,12 +4,12 @@ Hands-on workshop for OSSM 3 on OpenShift using **`Istio/default`** and the [Boo
 
 You build mesh observability step by step: **metrics** (Kiali graph), **distributed tracing** (Tempo), and **Envoy access logs** — on a **sidecar** dataplane.
 
-Run `oc apply` commands from the **repository root** (paths below are repo-relative).
+Run `oc apply` commands from the **repository root** (paths below are repo-relative). **Do not edit resources by hand** — each step’s YAML snippet is an excerpt from the manifest file that the `oc apply -f …` command applies.
 
-In Phases 3–8, each step shows **what you configure** before the `oc apply` commands:
+In Phases 3–8, snippets appear before the apply block so you can see what the command will do:
 
-- **New resource** — excerpt of the manifest you apply (first time that object exists on the cluster).
-- **Update** — only the fields you **add or change**. `oc apply -f …` **merges** into the object already on the cluster (same `kind`, `name`, and namespace). Repo manifests are the full merged object; snippets show the delta.
+- **New resource** — what the apply **creates** on the cluster.
+- **Update** — what the apply **merges** into an object that already exists (same `kind`, `name`, and namespace). The manifest file in the repo is the full merged result; the snippet shows only the new or changed fields.
 
 ### Shared CRs (created once, updated later)
 
@@ -185,16 +185,22 @@ oc wait istiocni/default --for=condition=Ready --timeout=300s
 
 **Goal:** create `Istio/default` with **discovery scope only** — no observability yet.
 
-Scope the control plane to namespaces labeled `istio-discovery=enabled`:
+Scope the control plane to namespaces labeled `istio-discovery=enabled`.
+
+Applying `06-control-plane-namespace.yaml` **creates** the `istio-system` namespace with:
 
 ```yaml
-# observability/manifests/07-istio-default.yaml (excerpt)
-apiVersion: sailoperator.io/v1
-kind: Istio
 metadata:
-  name: default
+  name: istio-system
+  labels:
+    istio-discovery: enabled
+    openshift.io/cluster-monitoring: "true"
+```
+
+Applying `07-istio-default.yaml` **creates** `Istio/default` with:
+
+```yaml
 spec:
-  namespace: istio-system
   values:
     meshConfig:
       discoverySelectors:
@@ -221,7 +227,9 @@ oc get pods -n istio-system -l istio=pilot
 
 **Goal:** label the app namespace so **sidecars are injected** from `Istio/default`.
 
-Add mesh labels to `ossm-playground-apps`:
+Add mesh labels to `ossm-playground-apps`.
+
+Applying `08-apps-mesh-enroll.yaml` **updates** the namespace with:
 
 ```yaml
 metadata:
@@ -254,7 +262,20 @@ oc get pods -n ossm-playground-apps
 
 Three resources work together:
 
-**1. `Telemetry/default` — enable Prometheus metrics on proxies** (`11`):
+**1. `PodMonitor`** — applying `10-podmonitor.yaml` **creates**:
+
+```yaml
+spec:
+  podMetricsEndpoints:
+    - path: /stats/prometheus
+      interval: 30s
+  selector:
+    matchExpressions:
+      - key: istio-prometheus-ignore
+        operator: DoesNotExist
+```
+
+**2. `Telemetry/default`** — applying `11-telemetry-metrics.yaml` **creates**:
 
 ```yaml
 apiVersion: telemetry.istio.io/v1
@@ -268,20 +289,7 @@ spec:
         - name: prometheus           # built-in Envoy stats provider
 ```
 
-**2. `PodMonitor` — scrape `istio-proxy` metrics** (`10`):
-
-```yaml
-spec:
-  podMetricsEndpoints:
-    - path: /stats/prometheus
-      interval: 30s
-  selector:
-    matchExpressions:
-      - key: istio-prometheus-ignore
-        operator: DoesNotExist
-```
-
-**3. `Kiali` — traffic graph from Thanos** (`12`):
+**3. `Kiali`** — applying `12-kiali.yaml` **creates**:
 
 ```yaml
 spec:
@@ -297,7 +305,6 @@ spec:
 ### Apply
 
 ```bash
-oc apply -f observability/manifests/09-istiod-servicemonitor.yaml
 oc apply -f observability/manifests/10-podmonitor.yaml
 oc apply -f observability/manifests/11-telemetry-metrics.yaml
 oc apply -f observability/manifests/12-kiali.yaml
@@ -323,23 +330,19 @@ Kiali → namespace **ossm-playground-apps** → **Graph**.
 
 **1. MinIO — S3 object storage for traces**
 
-`TempoStack` stores trace data in an S3 bucket. Apply the manifests in `observability/manifests/minio/` to:
+Applying `observability/manifests/minio/` **creates** the `minio` namespace, server, service, and a Job that creates the `ossm-traces` bucket once MinIO is up.
 
-- create the `minio` namespace and credentials
-- run a MinIO server backed by a PVC
-- expose the S3 API on `minio-service.minio.svc.cluster.local:9000`
-- run a Job that creates the `ossm-traces` bucket
+The bucket name must match `14-minio-traces-secret.yaml`.
 
-The bucket name must match manifest `14`:
+Applying `14-minio-traces-secret.yaml` **creates** the S3 secret with:
 
 ```yaml
-# observability/manifests/14-minio-traces-secret.yaml
 stringData:
   endpoint: http://minio-service.minio.svc.cluster.local:9000
   bucket: ossm-traces
 ```
 
-**2. `TempoStack` — trace backend using MinIO** (`15`):
+**2. `TempoStack`** — applying `15-tempostack.yaml` **creates**:
 
 ```yaml
 apiVersion: tempo.grafana.com/v1alpha1
@@ -354,7 +357,7 @@ spec:
       type: s3
 ```
 
-**3. `OpenTelemetryCollector` — receive OTLP from mesh, forward to Tempo** (`16`):
+**3. `OpenTelemetryCollector`** — applying `16-otel-collector.yaml` **creates**:
 
 ```yaml
 spec:
@@ -412,7 +415,7 @@ oc apply -f observability/manifests/21-tempostack-oauth-proxy-resources.yaml
 
 Three resources must agree on the provider name **`otel`**:
 
-**1. `Istio/default` — register OTLP destination** (`17`):
+**1. `Istio/default`** — applying `17-istio-tracing.yaml` **updates** with:
 
 ```yaml
 spec:
@@ -426,7 +429,7 @@ spec:
             port: 4317
 ```
 
-**2. `Telemetry/default` — enable tracing** (`18`):
+**2. `Telemetry/default`** — applying `18-telemetry-tracing.yaml` **updates** with:
 
 ```yaml
 spec:
@@ -436,7 +439,7 @@ spec:
       randomSamplingPercentage: 100
 ```
 
-**3. `Kiali` — enable Traces tab** (`19`):
+**3. `Kiali`** — applying `19-kiali-tracing.yaml` **updates** with:
 
 ```yaml
 spec:
@@ -474,6 +477,8 @@ echo "https://$(oc get route kiali -n istio-system -o jsonpath='{.spec.host}')"
 ## Phase 8 — Access logs
 
 **Goal:** add **Envoy access logs** to `Telemetry/default`.
+
+Applying `20-telemetry-accesslogs.yaml` **updates** with:
 
 ```yaml
 spec:
