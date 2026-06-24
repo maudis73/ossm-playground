@@ -3,7 +3,7 @@ apiVersion: telemetry.istio.io/v1
 kind: Telemetry
 metadata:
   name: default
-  namespace: maurizio-istio-system
+  namespace: istio-system
 spec:
   metrics:
     - providers:

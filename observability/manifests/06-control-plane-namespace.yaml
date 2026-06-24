@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: maurizio-istio-system
+  name: istio-system
   labels:
     istio-discovery: enabled
     openshift.io/cluster-monitoring: "true"

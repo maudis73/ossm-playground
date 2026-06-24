@@ -3,7 +3,7 @@ apiVersion: kiali.io/v1alpha1
 kind: Kiali
 metadata:
   name: kiali-user-workload-monitoring
-  namespace: maurizio-istio-system
+  namespace: istio-system
 spec:
   deployment:
     cluster_wide_access: true
@@ -30,7 +30,6 @@ spec:
       use_grpc: false
       internal_url: http://tempo-simplest-query-frontend.tempostack.svc.cluster.local:3200
       health_check_url: http://tempo-simplest-query-frontend.tempostack.svc.cluster.local:3200/status/services
-      external_url: https://tempo-simplest-query-frontend-tempostack.apps.ocp4.masales.cloud
       namespace_selector: true
       query_timeout: 60
       tempo_config:

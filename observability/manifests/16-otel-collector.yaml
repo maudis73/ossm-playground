@@ -3,7 +3,7 @@ apiVersion: opentelemetry.io/v1beta1
 kind: OpenTelemetryCollector
 metadata:
   name: otel
-  namespace: maurizio-istio-system
+  namespace: istio-system
 spec:
   mode: deployment
   config:

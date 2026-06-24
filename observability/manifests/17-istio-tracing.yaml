@@ -5,7 +5,7 @@ kind: Istio
 metadata:
   name: default
 spec:
-  namespace: maurizio-istio-system
+  namespace: istio-system
   version: v1.27-latest
   values:
     meshConfig:
@@ -16,5 +16,5 @@ spec:
       extensionProviders:
         - name: otel
           opentelemetry:
-            service: otel-collector.maurizio-istio-system.svc.cluster.local
+            service: otel-collector.istio-system.svc.cluster.local
             port: 4317

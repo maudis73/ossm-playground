@@ -3,7 +3,7 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   name: istiod-monitor
-  namespace: maurizio-istio-system
+  namespace: istio-system
 spec:
   endpoints:
     - interval: 30s
