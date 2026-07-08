@@ -1,0 +1,38 @@
+# Single-connection client for Step 6 — one HTTP/2 channel (L4 stickiness visible)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grpc-client
+  namespace: ossm-playground-apps
+  labels:
+    app: grpc-client
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grpc-client
+  template:
+    metadata:
+      labels:
+        app: grpc-client
+    spec:
+      containers:
+        - name: fortio
+          image: docker.io/fortio/fortio:latest
+          command:
+            - /usr/bin/fortio
+            - load
+            - -grpc
+            - -t
+            - "0"
+            - -c
+            - "1"
+            - -qps
+            - "5"
+            - -loglevel
+            - verbose
+            - grpc-echo.ossm-playground-apps.svc.cluster.local:8079
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi

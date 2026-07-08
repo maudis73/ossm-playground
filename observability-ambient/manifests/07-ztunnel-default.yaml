@@ -1,0 +1,8 @@
+# ZTunnel — per-node ambient L4 dataplane (HBONE, mTLS).
+apiVersion: sailoperator.io/v1alpha1
+kind: ZTunnel
+metadata:
+  name: default
+spec:
+  namespace: ztunnel
+  profile: ambient

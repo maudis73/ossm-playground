@@ -1,0 +1,10 @@
+# Enable OpenShift user workload monitoring (required for PodMonitor / Kiali metrics).
+# Skip if cluster-monitoring-config already exists with enableUserWorkload: true.
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: cluster-monitoring-config
+  namespace: openshift-monitoring
+data:
+  config.yaml: |
+    enableUserWorkload: true

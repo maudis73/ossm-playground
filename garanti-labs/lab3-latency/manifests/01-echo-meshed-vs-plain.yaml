@@ -1,0 +1,85 @@
+# Non-meshed namespace — no istio.io/rev label
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ossm-playground-perf
+  labels:
+    openshift.io/cluster-monitoring: "true"
+---
+# Echo server WITHOUT sidecar (plain K8s)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: echo
+  namespace: ossm-playground-perf
+  labels:
+    app: echo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: echo
+  template:
+    metadata:
+      labels:
+        app: echo
+    spec:
+      containers:
+        - name: fortio
+          image: docker.io/fortio/fortio:latest
+          args: ["server", "-http-port", "8080"]
+          ports:
+            - containerPort: 8080
+              name: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: echo
+  namespace: ossm-playground-perf
+spec:
+  ports:
+    - port: 8080
+      name: http
+      targetPort: 8080
+  selector:
+    app: echo
+---
+# Same echo IN meshed namespace (sidecar injected) for compare
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: echo
+  namespace: ossm-playground-apps
+  labels:
+    app: echo-meshed
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: echo-meshed
+  template:
+    metadata:
+      labels:
+        app: echo-meshed
+    spec:
+      containers:
+        - name: fortio
+          image: docker.io/fortio/fortio:latest
+          args: ["server", "-http-port", "8080"]
+          ports:
+            - containerPort: 8080
+              name: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: echo
+  namespace: ossm-playground-apps
+spec:
+  ports:
+    - port: 8080
+      name: http
+      targetPort: 8080
+  selector:
+    app: echo-meshed

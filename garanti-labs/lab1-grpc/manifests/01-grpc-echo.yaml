@@ -1,0 +1,52 @@
+# Fortio gRPC server — 3 replicas, port name grpc (Istio protocol detection)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grpc-echo
+  namespace: ossm-playground-apps
+  labels:
+    app: grpc-echo
+    version: v1
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: grpc-echo
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: grpc-echo
+        version: v1
+    spec:
+      containers:
+        - name: fortio
+          image: docker.io/fortio/fortio:latest
+          args: ["server", "-grpc-port", "8079", "-http-port", "8080"]
+          ports:
+            - containerPort: 8079
+              name: grpc
+            - containerPort: 8080
+              name: http
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grpc-echo
+  namespace: ossm-playground-apps
+  labels:
+    app: grpc-echo
+spec:
+  ports:
+    - port: 8079
+      name: grpc
+      targetPort: 8079
+    - port: 8080
+      name: http
+      targetPort: 8080
+  selector:
+    app: grpc-echo

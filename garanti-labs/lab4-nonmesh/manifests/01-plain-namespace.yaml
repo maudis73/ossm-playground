@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ossm-playground-plain
+  labels:
+    openshift.io/cluster-monitoring: "true"
+    # No istio.io/rev — pods here are NOT meshed

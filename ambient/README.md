@@ -1,12 +1,11 @@
-# Ambient mesh workshop (planned)
+# Ambient mesh (mixed-mode) — planned
 
-This module will cover the **ambient dataplane**: ztunnel, waypoints, namespace enrollment, and observability when sidecar and ambient workloads coexist.
+For the **ambient observability workshop** (pure ambient Bookinfo, ztunnel + waypoint, metrics/traces/logs), use **[observability-ambient](../observability-ambient/README.md)**.
 
-Topics to include:
+This `ambient/` module will cover **mixed-mode** scenarios not included in that lab:
 
-- Enabling `profile: ambient` on the control plane and CNI
-- Moving a workload (e.g. Bookinfo **ratings**) to an ambient namespace
-- Waypoint proxies for L7 policy and telemetry
+- Sidecar and ambient workloads in the same mesh
 - Cross-mode traffic (sidecar client → ambient destination)
+- Moving individual workloads between dataplane modes
 
-**Status:** not yet implemented. Complete the **[observability](../observability/README.md)** workshop first (sidecar metrics, traces, and access logs).
+**Status:** not yet implemented. Complete **[observability-ambient](../observability-ambient/README.md)** first.

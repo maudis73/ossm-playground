@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webhook-simulator
+  namespace: ossm-playground-plain
+  labels:
+    app: webhook-simulator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: webhook-simulator
+  template:
+    metadata:
+      labels:
+        app: webhook-simulator
+    spec:
+      containers:
+        - name: webhook
+          image: docker.io/nginxinc/nginx-unprivileged:1.25-alpine
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: config
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+      volumes:
+        - name: config
+          configMap:
+            name: webhook-simulator-config
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: webhook-simulator-config
+  namespace: ossm-playground-plain
+data:
+  nginx.conf: |
+    events { worker_connections 1024; }
+    http {
+      server {
+        listen 8080;
+        location /health { return 200 'ok'; add_header Content-Type text/plain; }
+        location / { return 200 'webhook-ok'; add_header Content-Type text/plain; }
+      }
+    }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: webhook-simulator
+  namespace: ossm-playground-plain
+spec:
+  ports:
+    - port: 80
+      targetPort: 8080
+  selector:
+    app: webhook-simulator

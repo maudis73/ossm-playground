@@ -1,0 +1,22 @@
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: reviews
+  namespace: ossm-playground-apps
+spec:
+  hosts:
+    - reviews
+  http:
+    - fault:
+        abort:
+          httpStatus: 503
+          percentage:
+            value: 50
+      retries:
+        attempts: 3
+        perTryTimeout: 2s
+        retryOn: 5xx,reset,connect-failure,refused-stream
+      route:
+        - destination:
+            host: reviews
+            subset: v2

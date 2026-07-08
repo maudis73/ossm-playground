@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>gRPC in the Mesh — Garanti Lab 1</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --slide-bg: #1a2332;
+      --text: #e8edf4;
+      --muted: #8b9cb3;
+      --accent-a: #4dabf7;
+      --accent-b: #ff922b;
+      --accent-green: #51cf66;
+      --accent-red: #ff6b6b;
+      --border: #2d3a4f;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+      height: 100vh;
+    }
+    .deck { height: 100vh; position: relative; }
+    .slide {
+      display: none;
+      height: 100vh;
+      padding: 2.5rem 3.5rem 4rem;
+      flex-direction: column;
+      justify-content: center;
+      background: var(--slide-bg);
+    }
+    .slide.active { display: flex; }
+    h1 { font-size: 2.4rem; font-weight: 700; margin-bottom: 0.5rem; line-height: 1.2; }
+    h2 { font-size: 1.75rem; font-weight: 600; margin-bottom: 1.25rem; color: var(--accent-a); }
+    h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem; }
+    p, li { font-size: 1.15rem; line-height: 1.55; color: var(--muted); }
+    .subtitle { font-size: 1.25rem; color: var(--muted); margin-bottom: 2rem; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: center; flex: 1; }
+    .diagram { width: 100%; max-height: 52vh; }
+    ul { margin-left: 1.25rem; }
+    li { margin-bottom: 0.45rem; }
+    li strong { color: var(--text); }
+    .tag {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-right: 0.35rem;
+    }
+    .tag-a { background: #1c3d5a; color: var(--accent-a); }
+    .tag-b { background: #4a3520; color: var(--accent-b); }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 1rem;
+      margin-top: 0.5rem;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 0.65rem 0.9rem;
+      text-align: left;
+    }
+    th { background: #243044; color: var(--text); }
+    td { color: var(--muted); }
+    .highlight { color: var(--text); font-weight: 600; }
+    .nav {
+      position: fixed;
+      bottom: 1.25rem;
+      right: 1.5rem;
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      z-index: 10;
+    }
+    .nav button {
+      background: #243044;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.95rem;
+    }
+    .nav button:hover { background: #2d3f58; }
+    .counter { color: var(--muted); font-size: 0.9rem; margin-right: 0.5rem; }
+    .title-slide { text-align: center; justify-content: center; }
+    .title-slide h1 { font-size: 2.8rem; }
+    .compare-box {
+      background: #243044;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      margin-top: 0.75rem;
+    }
+    .compare-box.reuse { border-left: 4px solid var(--accent-green); }
+    .compare-box.churn { border-left: 4px solid var(--accent-red); }
+    .compare-box h3 { color: var(--text); }
+    .compare-box code { color: var(--accent-b); font-size: 0.95rem; }
+    .footer-note { font-size: 0.85rem; color: var(--muted); margin-top: auto; padding-top: 1rem; }
+  </style>
+</head>
+<body>
+<div class="deck" id="deck">
+
+  <!-- SLIDE 1: Title -->
+  <section class="slide active title-slide">
+    <h1>gRPC in the Service Mesh</h1>
+    <p class="subtitle">Two TCP hops · Per-RPC LB · DestinationRule pool knobs</p>
+    <p style="color: var(--muted); font-size: 1rem;">Garanti BBVA · OSSM 3 sidecar · Lab 1</p>
+    <p class="footer-note">← → arrow keys · Open in browser fullscreen (F11)</p>
+  </section>
+
+  <!-- SLIDE 2: Migration story -->
+  <section class="slide">
+    <h2>Why this matters for Garanti</h2>
+    <div class="two-col">
+      <div>
+        <h3>Before mesh (app framework)</h3>
+        <ul>
+          <li>gRPC client keeps <strong>long-lived connections</strong></li>
+          <li>Many RPCs stick to <strong>same backend pod</strong></li>
+          <li>Keepalive / idle timeout in <strong>app config</strong></li>
+        </ul>
+        <br>
+        <h3>After mesh (Istio sidecar)</h3>
+        <ul>
+          <li>Envoy load-balances <strong>each RPC</strong> (HTTP/2)</li>
+          <li>Connection pool owned by <strong>DestinationRule</strong></li>
+          <li>Remove duplicate app + proxy settings</li>
+        </ul>
+      </div>
+      <svg class="diagram" viewBox="0 0 480 280" xmlns="http://www.w3.org/2000/svg">
+        <rect x="20" y="40" width="120" height="60" rx="8" fill="#243044" stroke="#4dabf7" stroke-width="2"/>
+        <text x="80" y="75" text-anchor="middle" fill="#e8edf4" font-size="13">App gRPC</text>
+        <text x="80" y="95" text-anchor="middle" fill="#8b9cb3" font-size="11">framework LB</text>
+        <path d="M140 70 L180 70" stroke="#8b9cb3" stroke-width="2" marker-end="url(#arr)"/>
+        <rect x="180" y="40" width="100" height="60" rx="8" fill="#243044" stroke="#8b9cb3"/>
+        <text x="230" y="75" text-anchor="middle" fill="#e8edf4" font-size="12">Pod A</text>
+        <rect x="180" y="120" width="100" height="60" rx="8" fill="#243044" stroke="#8b9cb3"/>
+        <text x="230" y="155" text-anchor="middle" fill="#e8edf4" font-size="12">Pod B</text>
+        <text x="230" y="210" text-anchor="middle" fill="#ff6b6b" font-size="12">sticky until reconnect</text>
+        <rect x="280" y="40" width="120" height="60" rx="8" fill="#243044" stroke="#4dabf7" stroke-width="2"/>
+        <text x="340" y="70" text-anchor="middle" fill="#e8edf4" font-size="13">App</text>
+        <path d="M400 70 L430 70" stroke="#4dabf7" stroke-width="2"/>
+        <rect x="430" y="50" width="40" height="40" rx="6" fill="#1c3d5a" stroke="#4dabf7"/>
+        <text x="450" y="75" text-anchor="middle" fill="#4dabf7" font-size="9">proxy</text>
+        <path d="M470 70 L500 70" stroke="#ff922b" stroke-width="2"/>
+        <rect x="300" y="120" width="70" height="45" rx="6" fill="#243044" stroke="#51cf66"/>
+        <text x="335" y="148" text-anchor="middle" fill="#e8edf4" font-size="10">Pod A</text>
+        <rect x="380" y="120" width="70" height="45" rx="6" fill="#243044" stroke="#51cf66"/>
+        <text x="415" y="148" text-anchor="middle" fill="#e8edf4" font-size="10">Pod B</text>
+        <rect x="460" y="120" width="70" height="45" rx="6" fill="#243044" stroke="#51cf66"/>
+        <text x="495" y="148" text-anchor="middle" fill="#e8edf4" font-size="10">Pod C</text>
+        <text x="380" y="200" text-anchor="middle" fill="#51cf66" font-size="12">per-RPC spread</text>
+        <defs><marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#8b9cb3"/></marker></defs>
+      </svg>
+    </div>
+  </section>
+
+  <!-- SLIDE 3: Two hops -->
+  <section class="slide">
+    <h2>The key insight: two separate TCP connections</h2>
+    <svg class="diagram" viewBox="0 0 900 320" xmlns="http://www.w3.org/2000/svg" style="max-height: 55vh;">
+      <!-- Client box -->
+      <rect x="30" y="100" width="140" height="100" rx="10" fill="#243044" stroke="#4dabf7" stroke-width="2"/>
+      <text x="100" y="140" text-anchor="middle" fill="#e8edf4" font-size="16" font-weight="bold">Fortio</text>
+      <text x="100" y="165" text-anchor="middle" fill="#8b9cb3" font-size="12">gRPC client</text>
+      <text x="100" y="185" text-anchor="middle" fill="#4dabf7" font-size="11">-c 1 or -c 2</text>
+      <!-- Client pod boundary -->
+      <rect x="200" y="60" width="200" height="200" rx="12" fill="none" stroke="#2d3a4f" stroke-width="2" stroke-dasharray="8,4"/>
+      <text x="300" y="85" text-anchor="middle" fill="#8b9cb3" font-size="11">grpc-client pod</text>
+      <!-- Proxy -->
+      <rect x="220" y="110" width="160" height="80" rx="8" fill="#1c3d5a" stroke="#4dabf7" stroke-width="2"/>
+      <text x="300" y="145" text-anchor="middle" fill="#4dabf7" font-size="14" font-weight="bold">istio-proxy</text>
+      <text x="300" y="168" text-anchor="middle" fill="#8b9cb3" font-size="11">Envoy</text>
+      <!-- Conn A -->
+      <rect x="175" y="125" width="50" height="50" rx="4" fill="#1c3d5a" stroke="#4dabf7" stroke-width="3"/>
+      <text x="200" y="155" text-anchor="middle" fill="#4dabf7" font-size="14" font-weight="bold">A</text>
+      <text x="200" y="200" text-anchor="middle" fill="#4dabf7" font-size="12">Conn A</text>
+      <text x="200" y="218" text-anchor="middle" fill="#8b9cb3" font-size="10">app → proxy</text>
+      <!-- Conn B -->
+      <rect x="420" y="125" width="120" height="50" rx="4" fill="#4a3520" stroke="#ff922b" stroke-width="3"/>
+      <text x="480" y="155" text-anchor="middle" fill="#ff922b" font-size="14" font-weight="bold">B</text>
+      <text x="480" y="200" text-anchor="middle" fill="#ff922b" font-size="12">Conn B</text>
+      <text x="480" y="218" text-anchor="middle" fill="#8b9cb3" font-size="10">proxy → backend pod</text>
+      <!-- Echo pods -->
+      <rect x="580" y="80" width="100" height="55" rx="8" fill="#243044" stroke="#51cf66"/>
+      <text x="630" y="115" text-anchor="middle" fill="#e8edf4" font-size="12">grpc-echo</text>
+      <text x="630" y="130" text-anchor="middle" fill="#8b9cb3" font-size="10">Pod 1</text>
+      <rect x="580" y="155" width="100" height="55" rx="8" fill="#243044" stroke="#51cf66"/>
+      <text x="630" y="190" text-anchor="middle" fill="#e8edf4" font-size="12">grpc-echo</text>
+      <text x="630" y="205" text-anchor="middle" fill="#8b9cb3" font-size="10">Pod 2</text>
+      <rect x="580" y="230" width="100" height="55" rx="8" fill="#243044" stroke="#51cf66"/>
+      <text x="630" y="265" text-anchor="middle" fill="#e8edf4" font-size="12">grpc-echo</text>
+      <text x="630" y="280" text-anchor="middle" fill="#8b9cb3" font-size="10">Pod 3</text>
+      <!-- Arrows -->
+      <path d="M170 150 L220 150" stroke="#4dabf7" stroke-width="3"/>
+      <path d="M380 150 L420 150" stroke="#ff922b" stroke-width="3"/>
+      <path d="M540 150 L580 150" stroke="#ff922b" stroke-width="2"/>
+      <path d="M540 155 L580 185" stroke="#ff922b" stroke-width="2" opacity="0.6"/>
+      <path d="M540 160 L580 255" stroke="#ff922b" stroke-width="2" opacity="0.6"/>
+      <!-- Observe box -->
+      <rect x="720" y="110" width="160" height="100" rx="8" fill="#4a3520" stroke="#ff922b" stroke-width="2"/>
+      <text x="800" y="145" text-anchor="middle" fill="#ff922b" font-size="13" font-weight="bold">observe-tcp.sh</text>
+      <text x="800" y="168" text-anchor="middle" fill="#e8edf4" font-size="11">reads Conn B ports</text>
+      <text x="800" y="188" text-anchor="middle" fill="#8b9cb3" font-size="10">in access logs</text>
+      <path d="M600 150 L700 150" stroke="#ff922b" stroke-width="1" stroke-dasharray="4,4" opacity="0.5"/>
+    </svg>
+    <p style="margin-top: 1rem;"><span class="tag tag-a">Conn A</span> Client reuses channel to sidecar &nbsp;·&nbsp; <span class="tag tag-b">Conn B</span> Proxy owns upstream TCP — <strong class="highlight">DestinationRule</strong></p>
+  </section>
+
+  <!-- SLIDE 4: Architecture — where pools & TCP live (PPT reference) -->
+  <section class="slide">
+    <h2>Inside the sidecar — where TCP &amp; pools are established</h2>
+    <svg class="diagram" viewBox="0 0 920 340" xmlns="http://www.w3.org/2000/svg" style="max-height: 58vh;">
+      <!-- Fortio -->
+      <rect x="10" y="130" width="110" height="70" rx="8" fill="#243044" stroke="#4dabf7" stroke-width="2"/>
+      <text x="65" y="158" text-anchor="middle" fill="#e8edf4" font-size="13" font-weight="bold">Fortio</text>
+      <text x="65" y="178" text-anchor="middle" fill="#4dabf7" font-size="10">-c = parallelism</text>
+      <text x="65" y="192" text-anchor="middle" fill="#8b9cb3" font-size="9">(Conn A owner)</text>
+      <!-- Conn A -->
+      <rect x="130" y="145" width="70" height="40" rx="4" fill="#1c3d5a" stroke="#4dabf7" stroke-width="2"/>
+      <text x="165" y="170" text-anchor="middle" fill="#4dabf7" font-size="11" font-weight="bold">Conn A</text>
+      <path d="M120 165 L130 165" stroke="#4dabf7" stroke-width="2"/>
+      <!-- Client pod box -->
+      <rect x="200" y="50" width="300" height="260" rx="12" fill="none" stroke="#2d3a4f" stroke-width="2" stroke-dasharray="8,4"/>
+      <text x="350" y="72" text-anchor="middle" fill="#8b9cb3" font-size="11">grpc-client pod</text>
+      <!-- Envoy outer -->
+      <rect x="215" y="85" width="270" height="210" rx="10" fill="#1a2332" stroke="#4dabf7" stroke-width="2"/>
+      <text x="350" y="108" text-anchor="middle" fill="#4dabf7" font-size="14" font-weight="bold">istio-proxy (Envoy)</text>
+      <!-- Inbound -->
+      <rect x="230" y="118" width="115" height="42" rx="6" fill="#243044" stroke="#4dabf7"/>
+      <text x="287" y="136" text-anchor="middle" fill="#e8edf4" font-size="10">Inbound listener</text>
+      <text x="287" y="150" text-anchor="middle" fill="#8b9cb3" font-size="8">app → :15001</text>
+      <path d="M200 165 L230 139" stroke="#4dabf7" stroke-width="2"/>
+      <!-- Router -->
+      <rect x="360" y="118" width="105" height="42" rx="6" fill="#243044" stroke="#8b9cb3"/>
+      <text x="412" y="144" text-anchor="middle" fill="#e8edf4" font-size="10">Router / LB</text>
+      <path d="M345 139 L360 139" stroke="#8b9cb3" stroke-width="1.5"/>
+      <!-- Outbound cluster highlight -->
+      <rect x="225" y="172" width="250" height="115" rx="8" fill="#4a3520" stroke="#ff922b" stroke-width="2"/>
+      <text x="350" y="192" text-anchor="middle" fill="#ff922b" font-size="12" font-weight="bold">Outbound cluster (grpc-echo)</text>
+      <text x="350" y="208" text-anchor="middle" fill="#ff922b" font-size="9">◄ DestinationRule applies HERE</text>
+      <!-- Pool per host -->
+      <rect x="238" y="218" width="95" height="58" rx="5" fill="#243044" stroke="#ff922b"/>
+      <text x="285" y="236" text-anchor="middle" fill="#e8edf4" font-size="9">Pool → Pod A</text>
+      <text x="285" y="250" text-anchor="middle" fill="#ff922b" font-size="8">TCP socket</text>
+      <text x="285" y="264" text-anchor="middle" fill="#8b9cb3" font-size="7">+ HTTP/2 streams</text>
+      <rect x="342" y="218" width="95" height="58" rx="5" fill="#243044" stroke="#ff922b"/>
+      <text x="389" y="236" text-anchor="middle" fill="#e8edf4" font-size="9">Pool → Pod B</text>
+      <text x="389" y="250" text-anchor="middle" fill="#ff922b" font-size="8">TCP socket</text>
+      <text x="389" y="264" text-anchor="middle" fill="#8b9cb3" font-size="7">+ HTTP/2 streams</text>
+      <rect x="446" y="218" width="95" height="58" rx="5" fill="#243044" stroke="#ff922b"/>
+      <text x="493" y="236" text-anchor="middle" fill="#e8edf4" font-size="9">Pool → Pod C</text>
+      <text x="493" y="250" text-anchor="middle" fill="#ff922b" font-size="8">TCP socket</text>
+      <text x="493" y="264" text-anchor="middle" fill="#8b9cb3" font-size="7">+ HTTP/2 streams</text>
+      <path d="M412 160 L350 172" stroke="#ff922b" stroke-width="1.5"/>
+      <!-- Conn B -->
+      <rect x="520" y="145" width="70" height="40" rx="4" fill="#4a3520" stroke="#ff922b" stroke-width="2"/>
+      <text x="555" y="170" text-anchor="middle" fill="#ff922b" font-size="11" font-weight="bold">Conn B</text>
+      <path d="M475 248 L520 165" stroke="#ff922b" stroke-width="2"/>
+      <path d="M475 248 L520 175" stroke="#ff922b" stroke-width="1.5" opacity="0.5"/>
+      <path d="M475 252 L520 185" stroke="#ff922b" stroke-width="1.5" opacity="0.5"/>
+      <!-- Echo pods -->
+      <rect x="610" y="95" width="88" height="48" rx="6" fill="#243044" stroke="#51cf66"/>
+      <text x="654" y="124" text-anchor="middle" fill="#e8edf4" font-size="11">echo Pod A</text>
+      <rect x="610" y="155" width="88" height="48" rx="6" fill="#243044" stroke="#51cf66"/>
+      <text x="654" y="184" text-anchor="middle" fill="#e8edf4" font-size="11">echo Pod B</text>
+      <rect x="610" y="215" width="88" height="48" rx="6" fill="#243044" stroke="#51cf66"/>
+      <text x="654" y="244" text-anchor="middle" fill="#e8edf4" font-size="11">echo Pod C</text>
+      <path d="M590 165 L610 119" stroke="#ff922b" stroke-width="2"/>
+      <path d="M590 175 L610 179" stroke="#ff922b" stroke-width="2"/>
+      <path d="M590 185 L610 239" stroke="#ff922b" stroke-width="2"/>
+      <!-- Legend right -->
+      <rect x="720" y="90" width="185" height="200" rx="8" fill="#243044" stroke="#2d3a4f"/>
+      <text x="812" y="112" text-anchor="middle" fill="#e8edf4" font-size="11" font-weight="bold">Established by</text>
+      <circle cx="735" cy="132" r="5" fill="#4dabf7"/>
+      <text x="748" y="136" fill="#8b9cb3" font-size="9">Conn A — Fortio opens to sidecar</text>
+      <circle cx="735" cy="158" r="5" fill="#ff922b"/>
+      <text x="748" y="162" fill="#8b9cb3" font-size="9">Conn B — Envoy opens to each pod</text>
+      <text x="812" y="188" text-anchor="middle" fill="#e8edf4" font-size="11" font-weight="bold">Pool = per pod IP</text>
+      <text x="730" y="206" fill="#8b9cb3" font-size="9">• 1+ TCP per host (HTTP/2 mux)</text>
+      <text x="730" y="222" fill="#8b9cb3" font-size="9">• Many pools possible (-c 2 → ~6)</text>
+      <text x="730" y="238" fill="#8b9cb3" font-size="9">• Lab reads Conn B ports in logs</text>
+      <text x="812" y="268" text-anchor="middle" fill="#51cf66" font-size="10">check.sh connections</text>
+    </svg>
+    <p style="margin-top: 0.5rem; font-size: 1rem;"><span class="tag tag-a">Conn A</span> not in DestinationRule &nbsp;·&nbsp; <span class="tag tag-b">Conn B + pools</span> = <code>trafficPolicy.connectionPool</code> on <code>grpc-echo</code> host</p>
+  </section>
+
+  <!-- SLIDE 5: All DR knobs — layer, lab step, observe (PPT reference) -->
+  <section class="slide">
+    <h2>DestinationRule knobs — layer, lab step, what to watch</h2>
+    <table style="font-size: 0.88rem;">
+      <tr>
+        <th>Setting (DR)</th>
+        <th>Layer</th>
+        <th>Operates on (in proxy)</th>
+        <th>Lab</th>
+        <th>Observe</th>
+      </tr>
+      <tr>
+        <td><code>loadBalancer: ROUND_ROBIN</code></td>
+        <td>HTTP/gRPC L7</td>
+        <td>Router — <strong>which pod</strong> per RPC</td>
+        <td>Step 1</td>
+        <td><code>watch-pods.sh</code> · <code>check.sh pods</code></td>
+      </tr>
+      <tr>
+        <td><code>http.maxRequestsPerConnection: 1</code></td>
+        <td>HTTP/2</td>
+        <td>Upstream pool — <strong>recycle</strong> TCP after N RPCs</td>
+        <td>Step 2</td>
+        <td><code>check.sh connections</code> → churn</td>
+      </tr>
+      <tr>
+        <td><code>tcp.maxConnections: 1</code></td>
+        <td>TCP</td>
+        <td>Per pod host — <strong>cap parallel</strong> TCP wires</td>
+        <td>Step 2b</td>
+        <td><code>check.sh connections</code> (~3 with -c 1)</td>
+      </tr>
+      <tr>
+        <td><code>http.idleTimeout: 5s</code></td>
+        <td>HTTP/2</td>
+        <td>Upstream pool — close when <strong>no active RPCs</strong></td>
+        <td>Step 3</td>
+        <td><code>check.sh connections 90s</code> + slow client</td>
+      </tr>
+      <tr>
+        <td><code>tcp.tcpKeepalive</code></td>
+        <td>TCP (kernel)</td>
+        <td>Socket probes — <strong>dead peer / NAT</strong> (not HTTP idle)</td>
+        <td>Step 4</td>
+        <td>tcpdump / pod-kill (not port count)</td>
+      </tr>
+      <tr>
+        <td><code>http.http2MaxRequests: 2</code></td>
+        <td>HTTP/2</td>
+        <td>Upstream pool — <strong>max concurrent streams</strong> per conn</td>
+        <td>Step 5</td>
+        <td><code>check.sh errors</code> under load</td>
+      </tr>
+      <tr>
+        <td>Service port name <code>grpc</code></td>
+        <td>Discovery</td>
+        <td>Which cluster / protocol Envoy picks</td>
+        <td>Step 6</td>
+        <td><code>check.sh pods</code> → BAD if wrong</td>
+      </tr>
+      <tr>
+        <td>Gateway <code>protocol: GRPC</code></td>
+        <td>Ingress</td>
+        <td>Gateway listener (not sidecar outbound)</td>
+        <td>Step 7</td>
+        <td><code>test-gateway-grpc.sh</code></td>
+      </tr>
+    </table>
+    <div class="two-col" style="margin-top: 0.75rem; gap: 1rem;">
+      <div class="compare-box reuse" style="margin-top: 0;">
+        <h3 style="font-size: 0.95rem;">Client (not DR)</h3>
+        <p style="font-size: 0.9rem;"><code>-c</code> = Fortio parallelism → Conn A count · <code>-qps</code> = rate (not TCP count)</p>
+      </div>
+      <div class="compare-box churn" style="margin-top: 0;">
+        <h3 style="font-size: 0.95rem;">Access log field</h3>
+        <p style="font-size: 0.9rem;">Before <code>outbound|</code> = echo <strong>pod</strong> · After = Conn B <strong>local port</strong></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 6: Who controls what -->
+  <section class="slide">
+    <h2>Who controls what?</h2>
+    <table>
+      <tr>
+        <th></th>
+        <th><span class="tag tag-a">Conn A</span> App → proxy</th>
+        <th><span class="tag tag-b">Conn B</span> Proxy → pod</th>
+      </tr>
+      <tr>
+        <td class="highlight">Opened by</td>
+        <td>gRPC client (Fortio)</td>
+        <td>Envoy (istio-proxy)</td>
+      </tr>
+      <tr>
+        <td class="highlight">Controlled by</td>
+        <td>App / gRPC library<br><code>-c 1</code>, client keepalive</td>
+        <td><strong>DestinationRule</strong><br><code>connectionPool</code></td>
+      </tr>
+      <tr>
+        <td class="highlight">Lab observes?</td>
+        <td>No</td>
+        <td><strong>Yes</strong> — port after <code>outbound|...</code></td>
+      </tr>
+      <tr>
+        <td class="highlight">Client reuses TCP — forces upstream reuse?</td>
+        <td colspan="2" style="text-align:center; color: #ff6b6b; font-weight: 600;">No — independent lifecycles</td>
+      </tr>
+    </table>
+    <p style="margin-top: 1.5rem;">Fortio can keep <strong>one</strong> channel to the sidecar all day. Envoy still opens/closes/reuses <strong>its own</strong> sockets to backends per DR policy.</p>
+  </section>
+
+  <!-- SLIDE 5: Two different questions -->
+  <section class="slide">
+    <h2>Two different questions — don't mix them up</h2>
+    <div class="two-col">
+      <div>
+        <div class="compare-box reuse">
+          <h3>Per-RPC load balancing</h3>
+          <p><strong>Which pod</strong> handles this RPC?</p>
+          <ul>
+            <li>Envoy L7 LB — always for gRPC in mesh</li>
+            <li><code>ROUND_ROBIN</code> in DR</li>
+            <li>Visible in PromQL / quoted pod IP in logs</li>
+            <li>Does <strong>not</strong> require new TCP per RPC</li>
+          </ul>
+        </div>
+      </div>
+      <div>
+        <div class="compare-box churn">
+          <h3>Per-RPC TCP (churn)</h3>
+          <p><strong>New upstream socket</strong> for this RPC?</p>
+          <ul>
+            <li>Only when DR <strong>forces</strong> recycle</li>
+            <li><code>maxRequestsPerConnection: 1</code></li>
+            <li><code>idleTimeout</code> + gap between RPCs</li>
+            <li>Visible in <code>observe-tcp.sh</code></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <svg class="diagram" viewBox="0 0 700 100" style="max-height: 15vh; margin-top: 1rem;">
+      <text x="120" y="40" text-anchor="middle" fill="#51cf66" font-size="14">10 RPCs → 3 pods (spread)</text>
+      <text x="120" y="65" text-anchor="middle" fill="#8b9cb3" font-size="12">baseline: ~3 TCP reused</text>
+      <text x="350" y="40" text-anchor="middle" fill="#ff6b6b" font-size="14">10 RPCs → 10 new ports</text>
+      <text x="350" y="65" text-anchor="middle" fill="#8b9cb3" font-size="12">maxReq=1 or idleTimeout</text>
+      <line x1="240" y1="50" x2="260" y2="50" stroke="#8b9cb3"/>
+      <text x="500" y="55" text-anchor="middle" fill="#e8edf4" font-size="13">Same client conn (-c 1) for both →</text>
+    </svg>
+  </section>
+
+  <!-- SLIDE 6: 10 messages -->
+  <section class="slide">
+    <h2>1 client TCP, 10 gRPC messages — how many upstream TCPs?</h2>
+    <table>
+      <tr>
+        <th>Scenario</th>
+        <th>Upstream TCP count</th>
+        <th>Pod spread</th>
+      </tr>
+      <tr>
+        <td>Baseline (<code>maxReq=0</code>, no short idle)</td>
+        <td style="color:#51cf66"><strong>~1–3 reused</strong></td>
+        <td>Can hit all 3 pods</td>
+      </tr>
+      <tr>
+        <td><code>maxRequestsPerConnection: 1</code></td>
+        <td style="color:#ff6b6b"><strong>~10 (one per RPC)</strong></td>
+        <td>Can still hit all 3 pods</td>
+      </tr>
+      <tr>
+        <td><code>idleTimeout: 5s</code>, gap 10s between RPCs</td>
+        <td style="color:#ff6b6b"><strong>~10 (one per RPC)</strong></td>
+        <td>Can still hit all 3 pods</td>
+      </tr>
+      <tr>
+        <td>10 RPCs in 1 second, baseline</td>
+        <td style="color:#51cf66"><strong>few reused</strong></td>
+        <td>Spread across pods</td>
+      </tr>
+    </table>
+    <p style="margin-top: 1.25rem;"><strong class="highlight">Yes, theoretically 10 upstream TCPs from 1 client connection</strong> — but only when pool policy + timing demand it, not by default.</p>
+  </section>
+
+  <!-- SLIDE 7: Step 2 -->
+  <section class="slide">
+    <h2>Lab Step 2 — maxRequestsPerConnection (fast client)</h2>
+    <div class="two-col">
+      <div class="compare-box reuse">
+        <h3>WITHOUT (baseline)</h3>
+        <p>5 qps · 30s window · <code>maxReq: 0</code></p>
+        <p style="font-size: 1.4rem; color: #51cf66; margin: 0.5rem 0;"><strong>~6 unique ports · REUSE</strong></p>
+        <p>Many RPCs share few upstream TCP sockets</p>
+      </div>
+      <div class="compare-box churn">
+        <h3>WITH maxReq: 1</h3>
+        <p>Same client · apply manifest <code>05</code></p>
+        <p style="font-size: 1.4rem; color: #ff6b6b; margin: 0.5rem 0;"><strong>~150 unique ports · CHURN</strong></p>
+        <p>Envoy closes upstream TCP after every RPC</p>
+      </div>
+    </div>
+    <svg class="diagram" viewBox="0 0 700 120" style="max-height: 18vh; margin-top: 1rem;">
+      <text x="175" y="30" fill="#8b9cb3" font-size="12">Client conn A: unchanged (still -c 2)</text>
+      <rect x="50" y="50" width="250" height="30" rx="4" fill="#1c3d5a" stroke="#4dabf7"/>
+      <text x="175" y="70" text-anchor="middle" fill="#4dabf7" font-size="11">one long-lived app→proxy channel</text>
+      <text x="525" y="30" fill="#8b9cb3" font-size="12">Upstream conn B: policy changes</text>
+      <rect x="400" y="50" width="40" height="30" rx="2" fill="#4a3520" stroke="#ff922b"/>
+      <rect x="445" y="50" width="40" height="30" rx="2" fill="#4a3520" stroke="#ff922b"/>
+      <rect x="490" y="50" width="40" height="30" rx="2" fill="#4a3520" stroke="#ff922b"/>
+      <text x="560" y="70" fill="#ff6b6b" font-size="11">new port each RPC</text>
+      <text x="350" y="110" text-anchor="middle" fill="#e8edf4" font-size="12">PromQL pod spread ~⅓ each in BOTH cases — only TCP churn differs</text>
+    </svg>
+  </section>
+
+  <!-- SLIDE 8: Step 3 idleTimeout -->
+  <section class="slide">
+    <h2>Lab Step 3 — idleTimeout (slow client)</h2>
+    <p style="margin-bottom: 1rem;">Slow client: <strong>1 RPC / 10s</strong> · <code>-c 1</code> (one client channel) · gap &gt; <code>idleTimeout: 5s</code></p>
+    <svg class="diagram" viewBox="0 0 800 200" style="max-height: 35vh;">
+      <!-- Timeline WITHOUT -->
+      <text x="20" y="25" fill="#51cf66" font-size="13" font-weight="bold">WITHOUT idleTimeout</text>
+      <line x1="20" y1="80" x2="380" y2="80" stroke="#51cf66" stroke-width="4"/>
+      <circle cx="40" cy="80" r="8" fill="#51cf66"/>
+      <text x="40" y="105" text-anchor="middle" fill="#8b9cb3" font-size="10">RPC1</text>
+      <circle cx="200" cy="80" r="8" fill="#51cf66"/>
+      <text x="200" y="105" text-anchor="middle" fill="#8b9cb3" font-size="10">RPC2</text>
+      <text x="120" y="65" text-anchor="middle" fill="#51cf66" font-size="10">same TCP :57116</text>
+      <text x="120" y="130" text-anchor="middle" fill="#8b9cb3" font-size="10">10s gap, conn stays open</text>
+      <!-- Timeline WITH -->
+      <text x="420" y="25" fill="#ff6b6b" font-size="13" font-weight="bold">WITH idleTimeout: 5s</text>
+      <line x1="420" y1="55" x2="500" y2="55" stroke="#ff922b" stroke-width="3"/>
+      <circle cx="420" cy="55" r="6" fill="#ff922b"/>
+      <text x="420" y="45" text-anchor="middle" fill="#8b9cb3" font-size="9">RPC1</text>
+      <text x="460" y="45" text-anchor="middle" fill="#ff6b6b" font-size="9">5s idle → CLOSE</text>
+      <line x1="500" y1="80" x2="580" y2="80" stroke="#ff922b" stroke-width="3"/>
+      <circle cx="580" cy="80" r="6" fill="#ff922b"/>
+      <text x="580" y="100" text-anchor="middle" fill="#8b9cb3" font-size="9">RPC2</text>
+      <text x="540" y="65" text-anchor="middle" fill="#ff6b6b" font-size="10">NEW port :44482</text>
+      <text x="500" y="130" text-anchor="middle" fill="#8b9cb3" font-size="10">Client conn A: still -c 1, unchanged</text>
+      <!-- Results -->
+      <rect x="20" y="155" width="360" height="40" rx="6" fill="#1a3d2a" stroke="#51cf66"/>
+      <text x="200" y="180" text-anchor="middle" fill="#51cf66" font-size="13">~1–3 ports · REUSE · ports repeat in tail -6</text>
+      <rect x="420" y="155" width="360" height="40" rx="6" fill="#3d1a1a" stroke="#ff6b6b"/>
+      <text x="600" y="180" text-anchor="middle" fill="#ff6b6b" font-size="13">~9 ports · CHURN · all different in tail -6</text>
+    </svg>
+    <p style="margin-top: 0.75rem;"><strong>Why define idleTimeout?</strong> Central mesh policy · cap stale upstream sockets · align with firewall/NAT timeouts · migrate from app framework.</p>
+  </section>
+
+  <!-- SLIDE 9: Step 4 keepalive -->
+  <section class="slide">
+    <h2>Lab Step 4 — tcpKeepalive vs idleTimeout</h2>
+    <div class="two-col">
+      <svg class="diagram" viewBox="0 0 400 220" xmlns="http://www.w3.org/2000/svg">
+        <text x="200" y="25" text-anchor="middle" fill="#e8edf4" font-size="14" font-weight="bold">Different layers</text>
+        <rect x="40" y="50" width="320" height="50" rx="6" fill="#243044" stroke="#8b9cb3"/>
+        <text x="200" y="80" text-anchor="middle" fill="#e8edf4" font-size="12">HTTP/2 connection (application)</text>
+        <text x="200" y="115" text-anchor="middle" fill="#ff6b6b" font-size="11">idleTimeout closes HERE when no active RPCs</text>
+        <rect x="40" y="130" width="320" height="50" rx="6" fill="#243044" stroke="#8b9cb3"/>
+        <text x="200" y="160" text-anchor="middle" fill="#e8edf4" font-size="12">TCP wire</text>
+        <text x="200" y="195" text-anchor="middle" fill="#4dabf7" font-size="11">tcpKeepalive sends probes HERE — does not cancel idleTimeout</text>
+      </svg>
+      <div>
+        <div class="compare-box reuse" style="margin-bottom: 1rem;">
+          <h3>Step 4: tcpKeepalive, no short idle</h3>
+          <p><strong>~1–3 ports · REUSE</strong> (like Step 3a)</p>
+        </div>
+        <div class="compare-box churn">
+          <h3>Step 3b: idleTimeout: 5s</h3>
+          <p><strong>~9 ports · CHURN</strong></p>
+        </div>
+        <p style="margin-top: 1rem;">Keepalive keeps the <strong>TCP wire healthy</strong> through idle gaps. It does <strong>not</strong> prevent HTTP/2 idle close.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 10: What to read in logs -->
+  <section class="slide">
+    <h2>Reading access logs (grpc-client → istio-proxy)</h2>
+    <div class="two-col">
+      <div>
+        <p style="font-family: monospace; font-size: 0.85rem; background: #0f1419; padding: 1rem; border-radius: 8px; color: #8b9cb3; line-height: 1.6;">
+          ... "10.128.0.85:8079" ... outbound|8079||grpc-echo... <span style="color:#ff922b">10.128.0.11:57116</span> ...
+        </p>
+        <ul style="margin-top: 1rem;">
+          <li><strong>Quoted IP</strong> <code>"10.128.0.85:8079"</code> → which <strong>echo pod</strong> (LB)</li>
+          <li><strong>Port after outbound|</strong> <code>:57116</code> → Envoy→pod <strong>TCP</strong> (Conn B)</li>
+          <li>Same port twice = <span style="color:#51cf66">REUSE</span></li>
+          <li>All different = <span style="color:#ff6b6b">CHURN</span></li>
+        </ul>
+      </div>
+      <div>
+        <h3>Run in lab</h3>
+        <pre style="background:#0f1419;padding:1rem;border-radius:8px;font-size:0.8rem;color:#4dabf7;line-height:1.5;">./garanti-labs/lab1-grpc/observe-tcp.sh \
+  90s "WITHOUT idleTimeout"
+
+./garanti-labs/lab1-grpc/observe-tcp.sh \
+  90s "WITH idleTimeout: 5s"</pre>
+        <p style="margin-top:0.75rem;font-size:0.95rem;">Always <strong>wait 90s after DR change</strong> before observing — old log lines pollute the window.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 11: DR migration -->
+  <section class="slide">
+    <h2>DestinationRule — what Garanti migrates</h2>
+    <table>
+      <tr><th>From app framework</th><th>To DestinationRule</th></tr>
+      <tr><td>gRPC LB policy</td><td><code>trafficPolicy.loadBalancer.simple</code></td></tr>
+      <tr><td>Client keepalive / idle</td><td><code>connectionPool.http.idleTimeout</code></td></tr>
+      <tr><td>Max requests per conn</td><td><code>connectionPool.http.maxRequestsPerConnection</code></td></tr>
+      <tr><td>TCP keepalive probes</td><td><code>connectionPool.tcp.tcpKeepalive</code></td></tr>
+      <tr><td>HTTP/2 max streams</td><td><code>connectionPool.http.http2MaxRequests</code></td></tr>
+    </table>
+    <p style="margin-top: 1.25rem; color: #ff6b6b;"><strong>Risk:</strong> duplicate app + Envoy settings → RST, <code>UNAVAILABLE</code>, flaky streams. <strong>One owner</strong> per knob.</p>
+    <p style="margin-top: 0.5rem;"><strong>Not in DR:</strong> ingress 2 MB body limit (gateway config) · proxy <code>:15021</code> readiness vs app liveness.</p>
+  </section>
+
+  <!-- SLIDE 12: Summary -->
+  <section class="slide title-slide">
+    <h2 style="color: var(--text); margin-bottom: 1.5rem;">Summary — three sentences for the room</h2>
+    <ol style="text-align: left; max-width: 720px; margin: 0 auto; color: var(--text); font-size: 1.2rem; line-height: 1.8;">
+      <li style="margin-bottom: 1rem;">The mesh load-balances <strong>each gRPC RPC</strong> — you don't need connection churn for spread.</li>
+      <li style="margin-bottom: 1rem;">The client owns <strong>Conn A</strong> to the sidecar; <strong>DestinationRule</strong> owns <strong>Conn B</strong> to pods — independent.</li>
+      <li><code>idleTimeout</code> and <code>maxRequestsPerConnection</code> control <strong>when Envoy recycles upstream TCP</strong> — visible with <code>observe-tcp.sh</code>.</li>
+    </ol>
+    <p class="footer-note" style="margin-top: 2rem;">Lab runbook: garanti-labs/README.md · Lab 1</p>
+  </section>
+
+</div>
+
+<div class="nav">
+  <span class="counter" id="counter">1 / 14</span>
+  <button type="button" id="prev">← Prev</button>
+  <button type="button" id="next">Next →</button>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  let i = 0;
+  function show(n) {
+    i = Math.max(0, Math.min(n, slides.length - 1));
+    slides.forEach((s, j) => s.classList.toggle('active', j === i));
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+  }
+  document.getElementById('prev').onclick = () => show(i - 1);
+  document.getElementById('next').onclick = () => show(i + 1);
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); show(i + 1); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); show(i - 1); }
+    if (e.key === 'Home') show(0);
+    if (e.key === 'End') show(slides.length - 1);
+  });
+  show(0);
+</script>
+</body>
+</html>

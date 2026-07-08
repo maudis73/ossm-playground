@@ -1,0 +1,19 @@
+# Step 7 — WRONG Service port name (http instead of grpc) → L4 stickiness, imbalance
+# Apply 01-grpc-echo.yaml to restore correct protocol detection.
+apiVersion: v1
+kind: Service
+metadata:
+  name: grpc-echo
+  namespace: ossm-playground-apps
+  labels:
+    app: grpc-echo
+spec:
+  ports:
+    - port: 8079
+      name: http
+      targetPort: 8079
+    - port: 8080
+      name: http-admin
+      targetPort: 8080
+  selector:
+    app: grpc-echo

@@ -1,0 +1,51 @@
+# Istio Gateway — HTTP test (no TLS cert required). Adjust hosts[] to your DNS pattern.
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: garanti-lab-gateway
+  namespace: ossm-playground-apps
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - port:
+        number: 8080
+        name: http-bookinfo
+        protocol: HTTP
+      hosts:
+        - "*"
+    - port:
+        number: 8081
+        name: grpc-port
+        protocol: GRPC
+      hosts:
+        - "*"
+---
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: garanti-lab-ingress
+  namespace: ossm-playground-apps
+spec:
+  hosts:
+    - "*"
+  gateways:
+    - garanti-lab-gateway
+  http:
+    - match:
+        - port: 8080
+          uri:
+            prefix: /productpage
+      route:
+        - destination:
+            host: productpage
+            port:
+              number: 9080
+  tcp:
+    - match:
+        - port: 8081
+      route:
+        - destination:
+            host: grpc-echo
+            port:
+              number: 8079

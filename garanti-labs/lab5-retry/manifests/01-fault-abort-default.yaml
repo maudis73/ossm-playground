@@ -1,0 +1,31 @@
+# 50% abort on reviews — no explicit retry block (Envoy/Istio defaults apply)
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: reviews
+  namespace: ossm-playground-apps
+spec:
+  hosts:
+    - reviews
+  http:
+    - fault:
+        abort:
+          httpStatus: 503
+          percentage:
+            value: 50
+      route:
+        - destination:
+            host: reviews
+            subset: v2
+---
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: reviews-lab
+  namespace: ossm-playground-apps
+spec:
+  host: reviews
+  subsets:
+    - name: v2
+      labels:
+        version: v2

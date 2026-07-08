@@ -1,0 +1,10 @@
+# Enroll ossm-playground-ambient-apps in ambient mode (L4 via ztunnel).
+# Apply before waypoint (11–12). Pods stay 1/1 — no rollout restart required.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ossm-playground-ambient-apps
+  labels:
+    openshift.io/cluster-monitoring: "true"
+    istio-discovery: enabled
+    istio.io/dataplane-mode: ambient

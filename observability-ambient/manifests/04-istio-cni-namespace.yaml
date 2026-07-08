@@ -1,0 +1,7 @@
+# Istio CNI namespace (required before sidecar injection on OpenShift).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: istio-cni
+  labels:
+    istio-discovery: enabled

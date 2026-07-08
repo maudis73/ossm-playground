@@ -1,0 +1,7 @@
+# ztunnel namespace — must match Istio spec.values.pilot.trustedZtunnelNamespace.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ztunnel
+  labels:
+    istio-discovery: enabled

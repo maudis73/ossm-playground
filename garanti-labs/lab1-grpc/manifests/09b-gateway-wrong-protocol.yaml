@@ -1,0 +1,17 @@
+# Step 8 — WRONG gateway protocol (HTTP on gRPC port) — grpcurl should fail
+# Restore with 09-gateway-grpc.yaml
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: grpc-lab-gateway
+  namespace: ossm-playground-apps
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - port:
+        number: 8081
+        name: grpc-echo
+        protocol: HTTP
+      hosts:
+        - "*"

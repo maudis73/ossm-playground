@@ -1,0 +1,35 @@
+# Step 8 — Ingress gRPC with correct protocol: GRPC (port-forward 18081:8081)
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: grpc-lab-gateway
+  namespace: ossm-playground-apps
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - port:
+        number: 8081
+        name: grpc-echo
+        protocol: GRPC
+      hosts:
+        - "*"
+---
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: grpc-lab-ingress
+  namespace: ossm-playground-apps
+spec:
+  hosts:
+    - "*"
+  gateways:
+    - grpc-lab-gateway
+  tcp:
+    - match:
+        - port: 8081
+      route:
+        - destination:
+            host: grpc-echo
+            port:
+              number: 8079

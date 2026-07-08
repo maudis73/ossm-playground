@@ -1,0 +1,20 @@
+# TCP keepalive on outbound proxy→proxy sockets — probes idle TCP; does NOT replace idleTimeout
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: grpc-echo
+  namespace: ossm-playground-apps
+spec:
+  host: grpc-echo.ossm-playground-apps.svc.cluster.local
+  trafficPolicy:
+    loadBalancer:
+      simple: ROUND_ROBIN
+    connectionPool:
+      tcp:
+        tcpKeepalive:
+          time: 5s
+          interval: 5s
+          probes: 3
+      http:
+        h2UpgradePolicy: UPGRADE
+        maxRequestsPerConnection: 0

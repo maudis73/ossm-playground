@@ -1,0 +1,16 @@
+# Istio/default — ambient control plane (discovery scope only; no tracing yet).
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: default
+spec:
+  namespace: istio-system
+  version: v1.27-latest
+  profile: ambient
+  values:
+    pilot:
+      trustedZtunnelNamespace: ztunnel
+    meshConfig:
+      discoverySelectors:
+        - matchLabels:
+            istio-discovery: enabled

@@ -1,0 +1,21 @@
+# Phase 6b — raise oauth-proxy CPU on query-frontend (OpenShift Jaeger UI route).
+# Without this, oauth-proxy can throttle at 20m CPU, fail readiness on :8443,
+# and the query-frontend Service gets no endpoints — Kiali traces break on :3200.
+# Apply after 15-tempostack.yaml when Jaeger UI + oauth-proxy are enabled.
+apiVersion: tempo.grafana.com/v1alpha1
+kind: TempoStack
+metadata:
+  name: simplest
+  namespace: tempostack
+spec:
+  template:
+    queryFrontend:
+      jaegerQuery:
+        authentication:
+          resources:
+            limits:
+              cpu: 200m
+              memory: 128Mi
+            requests:
+              cpu: 50m
+              memory: 64Mi

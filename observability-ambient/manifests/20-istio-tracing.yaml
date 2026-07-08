@@ -1,0 +1,22 @@
+# Phase 7 — enable OTLP tracing on the ambient mesh (apply after 19-otel-collector is Ready).
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: default
+spec:
+  namespace: istio-system
+  version: v1.27-latest
+  profile: ambient
+  values:
+    pilot:
+      trustedZtunnelNamespace: ztunnel
+    meshConfig:
+      discoverySelectors:
+        - matchLabels:
+            istio-discovery: enabled
+      enableTracing: true
+      extensionProviders:
+        - name: otel
+          opentelemetry:
+            service: otel-collector.istio-system.svc.cluster.local
+            port: 4317

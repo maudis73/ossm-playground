@@ -1,0 +1,9 @@
+# Istio CNI plugin — ambient profile (required for ztunnel traffic redirect).
+apiVersion: sailoperator.io/v1
+kind: IstioCNI
+metadata:
+  name: default
+spec:
+  namespace: istio-cni
+  version: v1.28.5
+  profile: ambient

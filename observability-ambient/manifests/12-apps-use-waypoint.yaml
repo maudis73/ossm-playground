@@ -1,0 +1,10 @@
+# Route ambient L7 traffic through the waypoint Gateway (apply after 11-waypoint-gateway).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ossm-playground-ambient-apps
+  labels:
+    openshift.io/cluster-monitoring: "true"
+    istio-discovery: enabled
+    istio.io/dataplane-mode: ambient
+    istio.io/use-waypoint: waypoint

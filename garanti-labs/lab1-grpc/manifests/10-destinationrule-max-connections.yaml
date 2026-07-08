@@ -1,0 +1,18 @@
+# tcp.maxConnections: 1 per backend pod (per downstream pool).
+# With Fortio -c 2 expect ~6 unique ports (2×3 pods); with -c 1 expect ~3.
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: grpc-echo
+  namespace: ossm-playground-apps
+spec:
+  host: grpc-echo.ossm-playground-apps.svc.cluster.local
+  trafficPolicy:
+    loadBalancer:
+      simple: ROUND_ROBIN
+    connectionPool:
+      tcp:
+        maxConnections: 1
+      http:
+        h2UpgradePolicy: UPGRADE
+        maxRequestsPerConnection: 0
