@@ -1,0 +1,17 @@
+# Same Sidecar as deny, plus nonmesh-plain on the egress allow-list.
+apiVersion: networking.istio.io/v1
+kind: Sidecar
+metadata:
+  name: mesh-client-egress
+  namespace: nonmesh-lab
+spec:
+  workloadSelector:
+    labels:
+      app: mesh-client
+  outboundTrafficPolicy:
+    mode: REGISTRY_ONLY
+  egress:
+    - hosts:
+        - "./*"
+        - "maurizio-istio-system/*"
+        - "nonmesh-plain/*"

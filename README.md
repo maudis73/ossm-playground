@@ -9,6 +9,7 @@ Repository: [github.com/maudis73/ossm-playground](https://github.com/maudis73/os
 | Demo | Status | Description |
 |------|--------|-------------|
 | **[observability](observability/README.md)** | Active | Bookinfo on sidecars — metrics, tracing (Tempo), access logs (8 phases) |
+| **[nonmesh-access](nonmesh-access/README.md)** | Active | Meshed pod → plain Service (ServiceEntry, Sidecar egress) and Kubernetes admission webhooks in/out of the mesh |
 | **[ambient](ambient/README.md)** | Planned | Ambient dataplane — ztunnel, waypoints, cross-mode traffic |
 | **[security](security/README.md)** | Planned | Policy, mTLS, authorization |
 

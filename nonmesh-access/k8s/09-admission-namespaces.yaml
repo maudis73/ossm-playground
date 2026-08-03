@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: admission-lab
+  labels:
+    openshift.io/cluster-monitoring: "true"
+    # No istio.io/rev initially — webhook pods stay out of the mesh (Phase F).
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: admission-test
+  labels:
+    openshift.io/cluster-monitoring: "true"
+    # Only objects in this namespace trigger our ValidatingWebhookConfiguration.
+    admission-lab: "true"

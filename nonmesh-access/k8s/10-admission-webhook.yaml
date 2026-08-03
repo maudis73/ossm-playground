@@ -1,0 +1,118 @@
+# Minimal HTTPS validating webhook.
+# Expects Secret admission-webhook-certs (tls.crt, tls.key) — created in the README.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: admission-webhook-code
+  namespace: admission-lab
+data:
+  server.py: |
+    #!/usr/bin/env python3
+    import json
+    import ssl
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_POST(self):
+            length = int(self.headers.get("Content-Length", 0))
+            body = json.loads(self.rfile.read(length))
+            req = body.get("request", {})
+            uid = req.get("uid", "")
+            obj = req.get("object") or {}
+            meta = obj.get("metadata") or {}
+            name = meta.get("name", "?")
+            ns = meta.get("namespace", "?")
+            print(f"admission: allow name={name} namespace={ns} uid={uid}", flush=True)
+            response = {
+                "apiVersion": "admission.k8s.io/v1",
+                "kind": "AdmissionReview",
+                "response": {
+                    "uid": uid,
+                    "allowed": True,
+                    "status": {"message": "admission-lab: allowed"},
+                },
+            }
+            out = json.dumps(response).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(out)))
+            self.end_headers()
+            self.wfile.write(out)
+
+        def log_message(self, fmt, *args):
+            print("%s - %s" % (self.address_string(), fmt % args), flush=True)
+
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    ctx.load_cert_chain("/certs/tls.crt", "/certs/tls.key")
+    httpd = HTTPServer(("0.0.0.0", 8443), Handler)
+    httpd.socket = ctx.wrap_socket(httpd.socket, server_side=True)
+    print("admission webhook listening on :8443", flush=True)
+    httpd.serve_forever()
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: admission-webhook
+  namespace: admission-lab
+  labels:
+    app: admission-webhook
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: admission-webhook
+  template:
+    metadata:
+      labels:
+        app: admission-webhook
+      annotations:
+        # Explicit off for Phase A. Phase B removes this / relies on ns injection.
+        sidecar.istio.io/inject: "false"
+    spec:
+      containers:
+        - name: webhook
+          image: registry.access.redhat.com/ubi9/python-312:latest
+          command: ["python3", "/app/server.py"]
+          ports:
+            - name: https
+              containerPort: 8443
+          volumeMounts:
+            - name: code
+              mountPath: /app
+              readOnly: true
+            - name: certs
+              mountPath: /certs
+              readOnly: true
+          readinessProbe:
+            tcpSocket:
+              port: 8443
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+      volumes:
+        - name: code
+          configMap:
+            name: admission-webhook-code
+            defaultMode: 0555
+        - name: certs
+          secret:
+            secretName: admission-webhook-certs
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: admission-webhook
+  namespace: admission-lab
+spec:
+  selector:
+    app: admission-webhook
+  ports:
+    - name: https
+      port: 443
+      targetPort: 8443

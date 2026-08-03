@@ -1,0 +1,27 @@
+# caBundle is filled at apply time (see README). Placeholder __CA_BUNDLE__ must be replaced.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: admission-lab-pod-validate
+webhooks:
+  - name: pod-validate.admission-lab.example
+    admissionReviewVersions: ["v1"]
+    clientConfig:
+      service:
+        name: admission-webhook
+        namespace: admission-lab
+        path: /validate
+        port: 443
+      caBundle: __CA_BUNDLE__
+    rules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE"]
+        resources: ["pods"]
+        scope: Namespaced
+    namespaceSelector:
+      matchLabels:
+        admission-lab: "true"
+    failurePolicy: Fail
+    sideEffects: None
+    timeoutSeconds: 5

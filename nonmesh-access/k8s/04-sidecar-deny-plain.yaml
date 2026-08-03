@@ -1,0 +1,18 @@
+# Tight egress — only in-namespace + control plane.
+# REGISTRY_ONLY is required: with ALLOW_ANY, hosts omitted from egress
+# can still be reached via the passthrough cluster.
+apiVersion: networking.istio.io/v1
+kind: Sidecar
+metadata:
+  name: mesh-client-egress
+  namespace: nonmesh-lab
+spec:
+  workloadSelector:
+    labels:
+      app: mesh-client
+  outboundTrafficPolicy:
+    mode: REGISTRY_ONLY
+  egress:
+    - hosts:
+        - "./*"
+        - "maurizio-istio-system/*"
