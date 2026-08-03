@@ -10,7 +10,6 @@ These are **different traffic directions**. Part 1 is about **outbound** from a 
 | Artifact | Purpose |
 |----------|---------|
 | **This README** | Autonomous lab guide (copy-paste `oc`) |
-| [RESPONSE.md](RESPONSE.md) | Customer-facing written answer |
 | [k8s/](k8s/) | Manifests |
 
 Enter the lab directory so relative `k8s/…` paths work:
@@ -684,5 +683,3 @@ oc logs -n nonmesh-lab deploy/mesh-client -c istio-proxy --tail=50
 | F | Admission webhook not injected | Pod CREATE **ok** |
 | G | Webhook injected | CREATE **fails** |
 | H | + `excludeInboundPorts` | CREATE **ok** again |
-
-Written answer: [RESPONSE.md](RESPONSE.md).
