@@ -1,7 +1,7 @@
 # Access to non-mesh services and webhook pods
 
-**Audience:** Garanti BBVA platform / mesh team  
-**Status:** Draft for review — intended for `Garanti-OSSM-Responses.md`  
+**Audience:** Platform / mesh team  
+**Status:** Draft for review  
 **Related lab:** `nonmesh-access/` (this project)
 
 ---
@@ -95,7 +95,7 @@ App HTTP “callback” URLs (meshed service POSTs to a plain URL) are **not** a
 | **Sidecar (egress)** | Not required to “enable” access; required to **allow** a host once you tighten egress | **No** |
 | **Injection off / excludeInboundPorts** | N/A | **Yes** — this is the relevant control |
 
-**Practical pattern for Garanti (~3,200 services):**
+**Practical pattern at scale (thousands of services):**
 
 1. Keep **Sidecar egress** generated from known outbound dependencies.  
 2. Enumerate known **plain / platform** namespaces on that allow list; use **ServiceEntry** where registry/TLS policy needs it.  
