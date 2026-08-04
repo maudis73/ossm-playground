@@ -9,7 +9,7 @@ These are **different traffic directions**. Part 1 is about **outbound** from a 
 
 | Artifact | Purpose |
 |----------|---------|
-| **This README** | Autonomous lab guide (copy-paste `oc`) |
+| **This README** | Step-by-step lab guide (copy-paste `oc` commands) |
 | [k8s/](k8s/) | Manifests |
 
 Enter the lab directory so relative `k8s/…` paths work:
@@ -20,7 +20,7 @@ cd ossm-playground/nonmesh-access
 
 ---
 
-## Concepts (read once)
+## Concepts
 
 ### Meshed vs plain
 
@@ -109,7 +109,7 @@ oc get pods -n maurizio-istio-system -l app=istiod
 
 # Part 1 — Meshed → plain Service
 
-**Story for this half:** Platforms still run Services without sidecars. Meshed apps must call them. We prove that (under PERMISSIVE) the call often works with no extra CRs, then show how **ServiceEntry** and a tight **Sidecar egress** list change the picture.
+**What this part demonstrates:** Platforms still run Services without sidecars. Meshed apps must call them. We prove that (under PERMISSIVE) the call often works with no extra CRs, then show how **ServiceEntry** and a tight **Sidecar egress** list change the picture.
 
 ---
 
@@ -219,7 +219,7 @@ oc exec -n nonmesh-lab deploy/mesh-client -c curl -- \
 
 ---
 
-## Phase B — ServiceEntry (optional register)
+## Phase B — ServiceEntry
 
 **Question:** What does adding a ServiceEntry change when Phase A already returned 200?
 
@@ -261,7 +261,7 @@ oc exec -n nonmesh-lab deploy/mesh-client -c curl -- \
 
 **Question:** If we tighten what `istio-proxy` is allowed to dial, can we block plain backends even though Phase A worked?
 
-`k8s/04-sidecar-deny-plain.yaml` is a **`Sidecar` API object** (not a new container). Important details for this cluster:
+`k8s/04-sidecar-deny-plain.yaml` is a **`Sidecar` API object** (not a new container). Important details for your cluster:
 
 - **`outboundTrafficPolicy: REGISTRY_ONLY`** — required so omitted hosts are not reached via the ALLOW_ANY passthrough cluster.
 - Egress hosts only: `./*` (this namespace) and `maurizio-istio-system/*` (istiod). **No** `nonmesh-plain/*`.
@@ -345,7 +345,7 @@ oc exec -n nonmesh-lab deploy/mesh-client -c curl -- \
 
 # Part 2 — Admission webhook pods and the mesh
 
-**Story for this half:** Teams ask how admission still “works in the mesh.” Admission is always API server → webhook. We show a working webhook **without** a sidecar, then inject one and watch creates fail, then recover with `excludeInboundPorts`. Recommended production pattern: **do not inject** admission controllers.
+**What this part demonstrates:** Teams ask how admission still “works in the mesh.” Admission is always API server → webhook. We show a working webhook **without** a sidecar, then inject one and watch creates fail, then recover with `excludeInboundPorts`. Recommended production pattern: **do not inject** admission controllers.
 
 ---
 
@@ -406,7 +406,7 @@ cd ossm-playground/nonmesh-access
 
 ---
 
-## Phase F — Webhook **outside** the mesh (works)
+## Phase F — Webhook **outside** the mesh
 
 Deploy a tiny HTTPS validating webhook that always **allows** and logs the request. Injection is explicitly off (`sidecar.istio.io/inject: "false"`) so we start with a clean **1/1** pod:
 
@@ -474,7 +474,7 @@ oc delete pod probe-pod -n admission-test --ignore-not-found
 
 ---
 
-## Phase G — Inject sidecar on the webhook (expect break)
+## Phase G — Inject sidecar on the webhook
 
 **Question:** What happens if the webhook **pod** sits in the mesh?
 
@@ -545,7 +545,7 @@ oc logs -n admission-lab deploy/admission-webhook -c webhook --tail=20 || true
 
 ---
 
-## Phase H — `excludeInboundPorts` (recovery; still prefer F)
+## Phase H — `excludeInboundPorts`
 
 **Question:** Can a meshed webhook work if we carve the listen port out of Envoy?
 
